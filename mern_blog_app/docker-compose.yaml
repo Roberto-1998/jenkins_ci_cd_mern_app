@@ -1,0 +1,43 @@
+services:
+  client-app:
+    container_name: client-app
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - server-app
+    networks:
+      - blog-net
+  server-app:
+    container_name: server-app
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    env_file:
+      - docker-compose.env
+    ports:
+      - "5001:5001"
+    depends_on:
+      - db-app
+    networks:
+      - blog-net
+  db-app:
+    container_name: db-app
+    image: mongo
+    env_file:
+      - docker-compose.env
+    ports:
+      - "27017:27017"
+    volumes:
+      - "dbdata:/data/db"
+    networks:
+      - blog-net
+
+volumes:
+  dbdata:
+
+networks:
+  blog-net:
+    driver: bridge
