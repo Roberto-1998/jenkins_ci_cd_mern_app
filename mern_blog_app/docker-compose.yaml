@@ -17,6 +17,7 @@ services:
       retries: 3
       start_period: 40s
       start_interval: 5s
+    restart: unless-stopped
   server-app:
     container_name: server-app
     build:
@@ -31,6 +32,7 @@ services:
         condition: service_healthy
     networks:
       - blog-net
+    restart: unless-stopped
   db-app:
     container_name: db-app
     image: mongo
@@ -42,6 +44,7 @@ services:
       - "dbdata:/data/db"
     networks:
       - blog-net
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "mongosh -u $MONGO_INITDB_ROOT_USERNAME -p $MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase admin --eval 'db.adminCommand(\"ping\")' || exit 1"]
       interval: 1m30s
