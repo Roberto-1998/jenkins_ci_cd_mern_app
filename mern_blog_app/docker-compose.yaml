@@ -10,6 +10,13 @@ services:
       - server-app
     networks:
       - blog-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+      start_interval: 5s
   server-app:
     container_name: server-app
     build:
@@ -20,7 +27,8 @@ services:
     ports:
       - "5001:5001"
     depends_on:
-      - db-app
+      db-app:
+        condition: service_healthy
     networks:
       - blog-net
   db-app:
@@ -34,6 +42,13 @@ services:
       - "dbdata:/data/db"
     networks:
       - blog-net
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh -u $MONGO_INITDB_ROOT_USERNAME -p $MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase admin --eval 'db.adminCommand(\"ping\")' || exit 1"]
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+      start_interval: 5s
 
 volumes:
   dbdata:
