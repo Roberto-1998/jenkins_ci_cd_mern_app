@@ -24,7 +24,7 @@ services:
       context: ./server
       dockerfile: Dockerfile
     env_file:
-      - docker-compose.env
+      - .env
     ports:
       - "5001:5001"
     depends_on:
@@ -37,7 +37,7 @@ services:
     container_name: db-app
     image: mongo
     env_file:
-      - docker-compose.env
+      - .env
     ports:
       - "27017:27017"
     volumes:
