@@ -6,7 +6,7 @@ The goal was to containerize the entire application (client, server, and databas
 We built everything from scratch:
 - New **Dockerfiles** for the client and the server.
 - A **docker-compose.yaml** file to orchestrate all services and enable smooth communication.
-- A `docker-compose.env` file to centralize environment variables.
+- A `.env` file to centralize environment variables.
 
 ---
 
@@ -24,7 +24,7 @@ mern_blog_app
 │   ├── server.js
 │   └── routes/...
 ├── docker-compose.yaml
-├── docker-compose.env
+├── .env
 └── README.md
 ```
 
@@ -121,7 +121,7 @@ services:
       context: ./server
       dockerfile: Dockerfile
     env_file:
-      - docker-compose.env
+      - .env
     ports:
       - "5001:5001"
     depends_on:
@@ -133,7 +133,7 @@ services:
     image: mongo
     container_name: db-app
     env_file:
-      - docker-compose.env
+      - .env
     ports:
       - "27017:27017"
     volumes:
@@ -153,7 +153,7 @@ networks:
 
 ## 🌍 Environment Variables
 
-All sensitive data and database configuration are stored in `docker-compose.env`:
+All sensitive data and database configuration are stored in `.env`:
 
 ```env
 MONGO_INITDB_ROOT_USERNAME=mongoadmin
