@@ -1,3 +1,5 @@
+![status](https://img.shields.io/badge/status-WIP-yellow)
+
 # Dockerized MERN Blog Application
 
 This branch contains the **Dockerized setup** of the original MERN Blog App project.  
