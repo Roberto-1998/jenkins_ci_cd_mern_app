@@ -1,0 +1,30 @@
+# Archivos de estado de Terraform
+**/terraform.tfstate
+**/terraform.tfstate.backup
+**/*.tfstate
+**/*.tfstate.backup
+
+# Archivos de plan
+**/terraform.tfplan
+**/*.tfplan
+
+# Archivos de configuración de backend local
+**/.terraform/
+**/.terraform.lock.hcl
+
+# Archivos de variables sensibles (si llegas a usarlos)
+**/terraform.tfvars
+**/*.tfvars
+
+# Archivos de credenciales (por si acaso)
+**/credentials.tf
+**/*_credentials.tf
+**/*.pem
+**/*.key
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Logs temporales
+**/*.log
