@@ -18,7 +18,8 @@ locals {
       ip_protocol = "TCP"
     },
     {
-      cidr_ipv4   = "${local.my_ip}/32"
+      /* cidr_ipv4   = "${local.my_ip}/32" */
+      cidr_ipv4   = "0.0.0.0/0"
       from_port   = 22
       to_port     = 22
       ip_protocol = "TCP"

@@ -1,0 +1,92 @@
+---
+- name: Setup Jenkins server on Ubuntu 24.04
+  hosts: jenkins
+  become: true
+
+  tasks:
+    - name: Ensure keyrings directory exists
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Remove old Jenkins repository file if exists
+      file:
+        path: /etc/apt/sources.list.d/jenkins.list
+        state: absent
+
+    - name: Remove old Jenkins key if exists
+      file:
+        path: /usr/share/keyrings/jenkins-keyring.asc
+        state: absent
+
+    - name: Download Jenkins GPG key
+      get_url:
+        url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+        dest: /tmp/jenkins.io.key
+        mode: '0644'
+
+    - name: Convert Jenkins key to gpg format
+      command: gpg --dearmor /tmp/jenkins.io.key
+      args:
+        creates: /tmp/jenkins.io.key.gpg
+
+    - name: Move key to /etc/apt/keyrings
+      copy:
+        src: /tmp/jenkins.io.key.gpg
+        dest: /etc/apt/keyrings/jenkins-keyring.gpg
+        remote_src: yes
+
+    - name: Add Jenkins repository
+      lineinfile:
+        path: /etc/apt/sources.list.d/jenkins.list
+        line: "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.gpg] https://pkg.jenkins.io/debian-stable binary/"
+        create: yes
+
+    - name: Update apt cache after adding Jenkins repo
+      apt:
+        update_cache: yes
+
+    - name: Install required packages
+      apt:
+        name:
+          - openjdk-17-jdk
+          - wget
+          - gnupg
+          - apt-transport-https
+        state: present
+
+    - name: Install Jenkins
+      apt:
+        name: jenkins
+        state: present
+
+    - name: Ensure Jenkins service is running
+      systemd:
+        name: jenkins
+        state: started
+        enabled: yes
+
+    - name: Clean up temporary key files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/jenkins.io.key
+        - /tmp/jenkins.io.key.gpg
+
+    - name: Check if Jenkins initial password exists
+      stat:
+        path: /var/lib/jenkins/secrets/initialAdminPassword
+      register: jenkins_initial_password
+
+    - name: Read Jenkins initial admin password
+      slurp:
+        src: /var/lib/jenkins/secrets/initialAdminPassword
+      register: jenkins_password
+      when: jenkins_initial_password.stat.exists
+
+    - name: Show Jenkins initial admin password
+      debug:
+        msg: "{{ jenkins_password.content | b64decode | trim }}"
+      when: jenkins_initial_password.stat.exists
