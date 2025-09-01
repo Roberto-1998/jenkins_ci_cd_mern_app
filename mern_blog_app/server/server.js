@@ -1,23 +1,27 @@
 const express = require('express');
+const cors = require('cors');
 const userRouter = require('./routes/user-routes');
 const blogRouter = require('./routes/blog-routes');
-require('./config/db');
-const cors = require('cors');
+require('./config/db'); // respeta la condición de NODE_ENV en db.js
 
 const app = express();
 
-app.use(cors());
-
 app.set('view engine', 'ejs');
 app.use(express.json());
+app.use(cors());
 
+// Rutas API
 app.use('/api/users', userRouter);
 app.use('/api/blogs', blogRouter);
 
-app.use('/api', (req, res, next) => {
-  res.send('hello');
-});
+// Rutas simples
+app.get('/api', (req, res) => res.status(200).json({ message: 'hello' }));
+app.get('/health', (req, res) => res.status(200).send('OK'));
 
-//define port
+// Solo escuchar cuando se ejecuta directamente
+if (require.main === module) {
+  const PORT = process.env.PORT || 5001;
+  app.listen(PORT, () => console.log('app started at 5001...'));
+}
 
-app.listen(5001, () => console.log('app started at 5001...'));
+module.exports = app;
