@@ -54,8 +54,8 @@
     "proxy": "http://backend:5001"
   },
   "devDependencies": {
-    "eslint": "^8.57.1",
-    "eslint-config-prettier": "^10.1.8",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.2",
     "eslint-plugin-prettier": "^5.5.4",
     "prettier": "^3.6.2"
   }

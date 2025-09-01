@@ -8,7 +8,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url:'https://github.com/Roberto-1998/jenkins_ci_cd_mern_app.git'
+                git branch: 'jenkins', url:'https://github.com/Roberto-1998/jenkins_ci_cd_mern_app.git'
             }
         }
 

@@ -30,9 +30,21 @@
 
   "test": "echo \"Error: no test specified\" && exit 1",
  
-   "lint": "eslint .",
+
+   
+
+  "lint": "eslint .",
+ 
+
+   
+
   "lint:fix": "eslint . --fix",
+ 
+
+   
+
   "format": "prettier --write ."
+ 
 
   },
  
@@ -48,12 +60,12 @@
 
    
 
-  "eslint": "^9.34.0",
+  "eslint": "^8.57.0",
  
 
    
 
-  "eslint-config-prettier": "^10.1.8",
+  "eslint-config-prettier": "^9.1.2",
  
 
    
