@@ -2,8 +2,11 @@ pipeline {
     agent any
 
     stages {
-        stage('Checkout') { steps { checkout scm } }
-
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url:'https://github.com/Roberto-1998/jenkins_ci_cd_mern_app.git'
+            }
+        }
 
         stage('Install Backend Dependencies') {
             steps {
