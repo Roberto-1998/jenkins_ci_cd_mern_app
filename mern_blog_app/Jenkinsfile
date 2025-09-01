@@ -5,6 +5,11 @@ pipeline {
         nodejs 'NODE18'
     }
 
+    environment {
+        IMAGE_PREFIX = 'masterdevopscloud'
+        DOCKERHUB_CREDENTIALS = 'dockerhublogin'
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -85,6 +90,60 @@ pipeline {
             post {
                 success {
                     archiveArtifacts artifacts: 'mern_blog_app/client/build/**', fingerprint: true
+                }
+            }
+        }
+
+        stage('Docker Build & Push - Backend') {
+            steps {
+                script {
+                    def COMMIT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    def TS = (env.BUILD_TIMESTAMP ?: sh(script: 'date -u +%Y%m%d%H%M%S', returnStdout: true).trim())
+                    def BRANCH = (env.BRANCH_NAME ?: 'jenkins').toLowerCase().replaceAll(/[^a-z0-9_.-]/, '-')
+                    def TAG = "${BRANCH}-${COMMIT}-${TS}"
+
+                    def imageName = "${env.IMAGE_PREFIX}/mern-backend"
+                    dir('mern_blog_app/server') {
+                        def img = docker.build("${imageName}:${TAG}")
+                        docker.withRegistry('https://index.docker.io/v1/', env.DOCKERHUB_CREDENTIALS) {
+                            img.push(TAG)
+                            img.push(BRANCH)
+                            img.push('latest')
+                        }
+                    }
+                }
+            }
+            post {
+                always {
+                    sh 'docker image prune -f || true'
+                }
+            }
+        }
+
+        stage('Docker Build & Push - Frontend') {
+            steps {
+                script {
+                    def COMMIT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    def TS = (env.BUILD_TIMESTAMP ?: sh(script: 'date -u +%Y%m%d%H%M%S', returnStdout: true).trim())
+                    def BRANCH = (env.BRANCH_NAME ?: 'jenkins').toLowerCase().replaceAll(/[^a-z0-9_.-]/, '-')
+                    def TAG = "${BRANCH}-${COMMIT}-${TS}"
+
+                    def imageName = "${env.IMAGE_PREFIX}/mern-frontend"
+
+                    dir('mern_blog_app/client') {
+                        def img = docker.build("${imageName}:${TAG}")
+                        docker.withRegistry('https://index.docker.io/v1/', env.DOCKERHUB_CREDENTIALS ) {
+                            img.push(TAG)
+                            img.push(BRANCH)
+                            img.push('latest')
+                        }
+                    }
+
+                }
+            }
+            post {
+                always {
+                    sh 'docker image prune -f || true'
                 }
             }
         }
