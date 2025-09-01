@@ -7,14 +7,16 @@ import { MemoryRouter } from 'react-router-dom';
 const mockStore = configureStore([]);
 
 function renderWithProviders(ui, { preloadedState } = {}) {
-  const store = mockStore(preloadedState ?? {
-    theme: { isDarkmode: false },
-    auth: { isLoggedIn: false },
-  });
+  const store = mockStore(
+    preloadedState ?? {
+      theme: { isDarkmode: false },
+      auth: { isLoggedIn: false },
+    },
+  );
   return render(
     <Provider store={store}>
       <MemoryRouter>{ui}</MemoryRouter>
-    </Provider>
+    </Provider>,
   );
 }
 
@@ -25,7 +27,10 @@ test('muestra el título BlogsApp', () => {
 
 test('muestra botones Login y SignUp cuando no hay sesión', () => {
   renderWithProviders(<Header />, {
-    preloadedState: { theme: { isDarkmode: false }, auth: { isLoggedIn: false } }
+    preloadedState: {
+      theme: { isDarkmode: false },
+      auth: { isLoggedIn: false },
+    },
   });
   expect(screen.getByText(/Login/i)).toBeInTheDocument();
   expect(screen.getByText(/SignUp/i)).toBeInTheDocument();
