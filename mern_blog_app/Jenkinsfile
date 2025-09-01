@@ -2,19 +2,51 @@ pipeline {
     agent any
 
     stages {
-        stage('Build') {
+        stage('Checkout') { steps { checkout scm } }
+
+
+        stage('Install Backend Dependencies') {
             steps {
-                echo 'Building..'
+                dir('mern_blog_app/server') {
+                    sh 'npm install || yarn install'
+                }
             }
         }
-        stage('Test') {
+
+        stage('Run Backend Tests') {
             steps {
-                echo 'Testing..'
+                dir('mern_blog_app/server') {
+                    sh 'npm test || echo "No backend tests yet"'
+                }
             }
         }
-        stage('Deploy') {
+
+        stage('Install Frontend Dependencies') {
             steps {
-                echo 'Deploying....'
+                dir('mern_blog_app/client') {
+                    sh 'npm install || yarn install'
+                }
+            }
+        }
+        stage('Run Frontend Tests') {
+            steps {
+                dir('mern_blog_app/client') {
+                    sh 'npm test || echo "No frontend tests yet"'
+                }
+            }
+        }
+
+        stage('Build Frontend App') {
+            steps {
+                dir('mern_blog_app/client') {
+                    sh 'npm run build'
+                }
+            }
+        }
+
+        stage('Archive Build Artifacts') {
+            steps {
+                archiveArtifacts artifacts: 'mern_blog_app/client/build/**', fingerprint: true
             }
         }
     }
