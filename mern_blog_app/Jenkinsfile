@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'NODE18'
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -11,7 +15,15 @@ pipeline {
         stage('Install Backend Dependencies') {
             steps {
                 dir('mern_blog_app/server') {
-                    sh 'npm install || yarn install'
+                    sh 'npm ci || npm install || yarn install'
+                }
+            }
+        }
+
+        stage('Lint Backend') {
+            steps {
+                dir('mern_blog_app/server') {
+                    sh 'npm run lint'
                 }
             }
         }
@@ -19,7 +31,7 @@ pipeline {
         stage('Run Backend Tests') {
             steps {
                 dir('mern_blog_app/server') {
-                    sh 'npm test || echo "No backend tests yet"'
+                    sh 'npm test -- --watchAll=false || echo "No backend tests yet"'
                 }
             }
         }
@@ -27,14 +39,23 @@ pipeline {
         stage('Install Frontend Dependencies') {
             steps {
                 dir('mern_blog_app/client') {
-                    sh 'npm install || yarn install'
+                    sh 'npm ci || npm install || yarn install'
                 }
             }
         }
+
+        stage('Lint Frontend') {
+            steps {
+                dir('mern_blog_app/client') {
+                    sh 'npm run lint'
+                }
+            }
+        }
+
         stage('Run Frontend Tests') {
             steps {
                 dir('mern_blog_app/client') {
-                    sh 'npm test || echo "No frontend tests yet"'
+                    sh 'npm test -- --watchAll=false || echo "No frontend tests yet"'
                 }
             }
         }
@@ -45,12 +66,12 @@ pipeline {
                     sh 'npm run build'
                 }
             }
-        }
-
-        stage('Archive Build Artifacts') {
-            steps {
-                archiveArtifacts artifacts: 'mern_blog_app/client/build/**', fingerprint: true
+            post {
+                success {
+                    archiveArtifacts artifacts: 'mern_blog_app/client/build/**', fingerprint: true
+                }
             }
         }
+
     }
 }
