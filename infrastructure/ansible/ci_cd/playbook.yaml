@@ -93,3 +93,49 @@
       debug:
         msg: "{{ jenkins_password.content | b64decode | trim }}"
       when: jenkins_initial_password.stat.exists
+
+    - name: Add NodeSource Node.js 18 repository
+      shell: curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+      args:
+       executable: /bin/bash
+
+    - name: Install Node.js and npm
+      apt:
+        name: nodejs
+        state: present
+
+    - name: Install Yarn globally with npm
+      npm:
+        name: yarn
+        global: yes
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu noble stable"
+        state: present
+
+    - name: Install Docker Engine and CLI
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+        update_cache: yes
+
+    - name: Add ubuntu user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    - name: Add ubuntu user to docker group
+      user:
+        name: jenkins
+        groups: docker
+        append: yes       
