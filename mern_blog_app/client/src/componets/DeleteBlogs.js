@@ -1,6 +1,6 @@
-import React from "react";
-import axios from "axios";
-import config from "../config";
+import React from 'react';
+import axios from 'axios';
+import config from '../config';
 
 const DeleteButton = ({ blogId, onDelete }) => {
   const handleDelete = async () => {
@@ -10,7 +10,7 @@ const DeleteButton = ({ blogId, onDelete }) => {
       // Call the onDelete callback to update the UI
       onDelete();
     } catch (error) {
-      console.error("Error deleting blog:", error);
+      console.error('Error deleting blog:', error);
     }
   };
 

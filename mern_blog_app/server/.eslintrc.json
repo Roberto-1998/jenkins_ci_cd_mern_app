@@ -1,6 +1,10 @@
 {
   "env": { "node": true, "es2021": true, "jest": true },
-  "extends": ["plugin:node/recommended", "plugin:promise/recommended", "prettier"],
+  "extends": [
+    "plugin:node/recommended",
+    "plugin:promise/recommended",
+    "prettier"
+  ],
   "plugins": ["prettier"],
   "rules": {
     "prettier/prettier": ["error"]
