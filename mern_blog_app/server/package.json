@@ -12,7 +12,6 @@
     "format": "prettier --write .",
     "test": "jest --runInBand --detectOpenHandles",
     "test:cov": "jest --coverage --runInBand"
-
   },
   "author": "khushi patel",
   "license": "ISC",
