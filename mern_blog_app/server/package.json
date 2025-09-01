@@ -19,13 +19,20 @@
    
 
   "start:dev": "nodemon server.js",
+ 
+
+   
+
   "start": "node server.js",
  
 
    
 
-  "test": "echo \"Error: no test specified\" && exit 1"
+  "test": "echo \"Error: no test specified\" && exit 1",
  
+   "lint": "eslint .",
+  "lint:fix": "eslint . --fix",
+  "format": "prettier --write ."
 
   },
  
@@ -41,7 +48,37 @@
 
    
 
-  "nodemon": "^2.0.16"
+  "eslint": "^9.34.0",
+ 
+
+   
+
+  "eslint-config-prettier": "^10.1.8",
+ 
+
+   
+
+  "eslint-plugin-node": "^11.1.0",
+ 
+
+   
+
+  "eslint-plugin-prettier": "^5.5.4",
+ 
+
+   
+
+  "eslint-plugin-promise": "^7.2.1",
+ 
+
+   
+
+  "nodemon": "^2.0.16",
+ 
+
+   
+
+  "prettier": "^3.6.2"
  
 
   },
@@ -58,10 +95,10 @@
    
 
   "cors": "^2.8.5",
+ 
 
+   
 
-
-  
   "dotenv": "^16.5.0",
  
 
