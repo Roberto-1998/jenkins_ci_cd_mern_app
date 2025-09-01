@@ -35,7 +35,7 @@ const Header = () => {
     if (savedTheme !== null) {
       dispatch(setDarkmode(JSON.parse(savedTheme))); 
     }
-  }, []);
+  }, [dispatch]);
   useEffect(() => {
     const path = location.pathname;
     if (path.startsWith("/blogs/add")) {
