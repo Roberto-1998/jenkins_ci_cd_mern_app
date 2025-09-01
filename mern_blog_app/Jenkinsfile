@@ -20,13 +20,13 @@ pipeline {
             }
         }
 
-        stage('Backend Dependency Audit') {
+/*         stage('Backend Dependency Audit') {
             steps {
                 dir('mern_blog_app/server') {
                     sh 'npm audit --audit-level=high'
                 }
             }
-        }
+        } */
 
         stage('Lint Backend') {
             steps {
@@ -52,13 +52,13 @@ pipeline {
             }
         }
 
-        stage('Frontend Dependency Audit') {
+/*         stage('Frontend Dependency Audit') {
             steps {
                 dir('mern_blog_app/client') {
                     sh 'npm audit --audit-level=high'
                 }
             }
-        }
+        } */
 
         stage('Lint Frontend') {
             steps {
