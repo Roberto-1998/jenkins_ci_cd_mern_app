@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  labels:
+    app: backend-app
+    tier: backend
+spec:
+  selector:
+    matchLabels:
+      app: backend-app
+      tier: backend
+  replicas: 1
+  template:
+    metadata:
+      name: backend-app
+      labels:
+        app: backend-app
+        tier: backend
+    spec:
+      containers:
+        - name: backend-app
+          image: masterdevopscloud/mern-backend
+          ports:
+            - containerPort: 5001
+              name: backend-port
+          env:
+            - name: MONGO_URI  
+              valueFrom: 
+                secretKeyRef:
+                  name: db-secret
+                  key: MONGO_URI
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+      initContainers:
+        - name: init-db
+          image: busybox:1.28
+          command:
+            - sh
+            - -c
+            - >
+              until nc -z db-app 27017;
+              do echo "waiting for MongoDB..."; sleep 2; done
+
+                
