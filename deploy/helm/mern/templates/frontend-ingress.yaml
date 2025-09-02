@@ -2,6 +2,8 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: mern-app-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
 spec:
   ingressClassName: nginx
   rules:
@@ -14,4 +16,4 @@ spec:
               service:
                 name: client-app
                 port: 
-                  number: 3000
+                  number: 80
