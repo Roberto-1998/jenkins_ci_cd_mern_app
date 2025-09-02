@@ -9,7 +9,7 @@ spec:
   selector:
         app: frontend-app
         tier: frontend 
-  type: NodePort
+  type: ClusterIP
   ports:
     - name: http
       targetPort: frontend-port
