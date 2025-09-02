@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: db-statefulset
+  labels:
+    app: db-app
+    tier: db
+spec:
+  serviceName: db
+  replicas: 1
+  selector:
+    matchLabels:
+      app:  db-app
+      tier: db
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      name: db-app
+      labels:
+        app: db-app
+        tier: db
+    spec:
+      securityContext:
+        fsGroup: 999
+        fsGroupChangePolicy: OnRootMismatch
+      containers:
+        - name: db-app
+          image: mongo
+          ports:
+            - containerPort: 27017
+              name: db-app-port
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: MONGO_INITDB_ROOT_USERNAME
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secret
+                  key: MONGO_INITDB_ROOT_PASSWORD
+          volumeMounts:
+            - mountPath: "/data/db"
+              name: db-volume
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+  volumeClaimTemplates:
+    - metadata:
+        name: db-volume
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 1Gi
+  
+   
