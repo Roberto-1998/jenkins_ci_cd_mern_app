@@ -1,19 +1,19 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: mern-app-ingress
+  name: {{ .Values.ingress.name}}
   annotations:
     kubernetes.io/ingress.class: nginx
 spec:
-  ingressClassName: nginx
+  ingressClassName: {{ .Values.ingress.className }}
   rules:
-    - host: mernapp.rcginfo.xyz
+    - host: {{ .Values.ingress.host }}
       http:
         paths:
-          - path: /
+          - path: {{ .Values.ingress.path }}
             pathType: Prefix
             backend:
               service:
-                name: client-app
+                name: {{ .Values.ingress.backend_service }}
                 port: 
-                  number: 80
+                  number: {{ .Values.ingress.backend_port }}

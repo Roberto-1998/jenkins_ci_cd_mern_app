@@ -3,14 +3,14 @@ kind: Service
 metadata: 
   name: client-app
   labels:
-    app: frontend-app
-    tier: frontend
+    app: {{ .Values.frontend_app.name }}
+    tier: {{ .Values.frontend_app.tier }}
 spec:
   selector:
-        app: frontend-app
-        tier: frontend 
+        app: {{ .Values.frontend_app.name }}
+        tier: {{ .Values.frontend_app.tier }}
   type: ClusterIP
   ports:
     - name: http
-      targetPort: frontend-port
+      targetPort: {{ .Values.frontend_app.port.name }}
       port: 80

@@ -1,63 +1,63 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: db-statefulset
+  name: {{ .Values.db_app.statefulset_name }}
   labels:
-    app: db-app
-    tier: db
+    app: {{ .Values.db_app.name }}
+    tier: {{ .Values.db_app.tier }}
 spec:
-  serviceName: db
-  replicas: 1
+  serviceName: {{ .Values.db_app.service_name }}
+  replicas: {{ .Values.db_app.replicas }}
   selector:
     matchLabels:
-      app:  db-app
-      tier: db
+      app:  {{ .Values.db_app.name }}
+      tier: {{ .Values.db_app.tier }}
   updateStrategy:
-    type: RollingUpdate
+    type: {{ .Values.db_app.update_strategy.type }}
   template:
     metadata:
-      name: db-app
+      name: {{ .Values.db_app.name }}
       labels:
-        app: db-app
-        tier: db
+        app: {{ .Values.db_app.name }}
+        tier: {{ .Values.db_app.tier }}
     spec:
       securityContext:
-        fsGroup: 999
-        fsGroupChangePolicy: OnRootMismatch
+        fsGroup: {{ .Values.db_app.securityContext.fsGroup }}
+        fsGroupChangePolicy: {{ .Values.db_app.securityContext.fsGroupChangePolicy }}
       containers:
-        - name: db-app
-          image: mongo
+        - name: {{ .Values.db_app.name }}
+          image: "{{ .Values.db_app.image.name }}:{{ .Values.db_app.image.tag }}"
           ports:
-            - containerPort: 27017
-              name: db-app-port
+            - containerPort: {{ .Values.db_app.port.number }}
+              name: {{ .Values.db_app.port.name }}
           env:
             - name: MONGO_INITDB_ROOT_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: db-secret
+                  name: {{ .Values.secret.name }}
                   key: MONGO_INITDB_ROOT_USERNAME
             - name: MONGO_INITDB_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: db-secret
+                  name: {{ .Values.secret.name }}
                   key: MONGO_INITDB_ROOT_PASSWORD
           volumeMounts:
-            - mountPath: "/data/db"
-              name: db-volume
+            - mountPath: {{ .Values.db_app.volumeMounts.mountPath }}
+              name: {{ .Values.db_app.volumeClaimTemplates.name }}
           resources:
             requests:
-              cpu: "250m"
-              memory: "512Mi"
+              cpu: {{ .Values.db_app.resources.requests.cpu }}
+              memory: {{ .Values.db_app.resources.requests.memory }}
             limits:
-              cpu: "1"
-              memory: "2Gi"
+              cpu: {{ .Values.db_app.resources.limits.cpu }}
+              memory: {{ .Values.db_app.resources.limits.memory }}
   volumeClaimTemplates:
     - metadata:
-        name: db-volume
+        name: {{ .Values.db_app.volumeClaimTemplates.name }}
       spec:
         accessModes: [ "ReadWriteOnce" ]
         resources:
           requests:
-            storage: 1Gi
+            storage: {{ .Values.db_app.volumeClaimTemplates.storage }}
   
    

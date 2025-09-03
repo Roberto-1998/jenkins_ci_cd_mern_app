@@ -1,29 +1,29 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: backend-deployment
+  name: {{ .Values.backend_app.deployment_name }}
   labels:
-    app: backend-app
-    tier: backend
+    app: {{ .Values.backend_app.name }}
+    tier: {{ .Values.backend_app.tier }}
 spec:
   selector:
     matchLabels:
-      app: backend-app
-      tier: backend
-  replicas: 1
+      app: {{ .Values.backend_app.name }}
+      tier: {{ .Values.backend_app.tier }}
+  replicas: {{ .Values.backend_app.tier }}
   template:
     metadata:
-      name: backend-app
+      name: {{ .Values.backend_app.name }}
       labels:
-        app: backend-app
-        tier: backend
+        app: {{ .Values.backend_app.name }}
+        tier: {{ .Values.backend_app.tier }}
     spec:
       containers:
-        - name: backend-app
-          image: masterdevopscloud/mern-backend
+        - name: {{ .Values.backend_app.name }}
+          image:  "{{ .Values.backend_app.image.name }}:{{ .Values.backend_app.image.tag }}"
           ports:
-            - containerPort: 5001
-              name: backend-port
+            - containerPort: {{ .Values.backend_app.port.number }}
+              name: {{ .Values.backend_app.port.name }}
           env:
             - name: MONGO_URI  
               valueFrom: 
@@ -32,11 +32,11 @@ spec:
                   key: MONGO_URI
           resources:
             requests:
-              cpu: "250m"
-              memory: "512Mi"
+              cpu: {{ .Values.backend_app.resources.requests.cpu }}
+              memory: {{ .Values.backend_app.resources.requests.memory }}
             limits:
-              cpu: "1"
-              memory: "2Gi"
+              cpu: {{ .Values.backend_app.resources.limits.cpu }}
+              memory: {{ .Values.backend_app.resources.limits.memory }}
       initContainers:
         - name: init-db
           image: busybox:1.28

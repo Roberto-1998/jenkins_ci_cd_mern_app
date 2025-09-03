@@ -1,35 +1,37 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend-app-deployment 
+  name: {{ .Values.frontend_app.deployment_name }}
   labels:
-    app: frontend-app
-    tier: frontend
+    app: {{ .Values.frontend_app.name }}
+    tier: {{ .Values.frontend_app.tier }}
 spec:
-  replicas: 2
+  replicas: {{ .Values.frontend_app.replicas }}
   selector:
     matchLabels:
-      app: frontend-app
-      tier: frontend
+      app: {{ .Values.frontend_app.name }}
+      tier: {{ .Values.frontend_app.tier }}
   template:
     metadata: 
-      name: frontend-app
+      name: {{ .Values.frontend_app.name }}
       labels:
-        app: frontend-app
-        tier: frontend
+        app: {{ .Values.frontend_app.name }}
+        tier: {{ .Values.frontend_app.tier }}
     spec:
       containers:
-        - name: frontend-app
-          image: masterdevopscloud/mern-frontend
+        - name: {{ .Values.frontend_app.name }}
+          image: "{{ .Values.frontend_app.image.name }}:{{ .Values.frontend_app.image.tag }}"
           ports:
-            - name: frontend-port
-              containerPort: 80
-              protocol: TCP
+            - name: {{ .Values.frontend_app.port.name }}
+              containerPort: {{ .Values.frontend_app.port.number }}
           resources:
             requests:
-              cpu: "250m"
-              memory: "512Mi"
+              cpu: {{ .Values.frontend_app.resources.requests.cpu }}
+              memory: {{ .Values.frontend_app.resources.requests.memory }}
             limits:
-              cpu: "1"
-              memory: "2Gi"
-
+              cpu: {{ .Values.frontend_app.resources.limits.cpu }}
+              memory: {{ .Values.frontend_app.resources.limits.memory }}
+      initContainers:
+        - name: init-myservice
+          image: busybox:1.28
+          command: ['sh', '-c', "until nslookup server-app.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting for backend api; sleep 2; done"]

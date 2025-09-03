@@ -3,15 +3,15 @@ kind: Service
 metadata:
   name: server-app
   labels:
-    app: backend-app
-    tier: backend
+    app: {{ .Values.backend_app.name}}
+    tier: {{ .Values.backend_app.tier}}
 spec:
   type: ClusterIP
   selector:
-    app: backend-app
-    tier: backend   
+    app: {{ .Values.backend_app.name}}
+    tier: {{ .Values.backend_app.tier}}   
   ports:
     - name: http 
-      targetPort: backend-port
+      targetPort: {{ .Values.backend_app.port.name}}
       port: 5001
       protocol: TCP
