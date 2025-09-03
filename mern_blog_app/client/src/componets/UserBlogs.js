@@ -1,57 +1,57 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import Blogs from './Blogs';
-import DeleteButton from './DeleteBlogs';
-import { makeStyles } from '@mui/styles';
-import config from '../config';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import Blogs from "./Blogs";
+import DeleteButton from "./DeleteBlogs";
+import { makeStyles } from "@mui/styles";
+import config from "../config";
 
 const useStyles = makeStyles((theme) => ({
   container: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    margin: '20px auto',
-    width: '80%',
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    margin: "20px auto",
+    width: "80%",
   },
   blogContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    padding: '20px',
-    border: '1px solid #ccc',
-    borderRadius: '10px',
-    marginBottom: '20px',
-    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    padding: "20px",
+    border: "1px solid #ccc",
+    borderRadius: "10px",
+    marginBottom: "20px",
+    boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
   },
   blogImage: {
-    width: '100%',
-    height: 'auto',
-    borderRadius: '10px',
-    marginBottom: '10px',
+    width: "100%",
+    height: "auto",
+    borderRadius: "10px",
+    marginBottom: "10px",
   },
   editButton: {
-    background: '#f0f0f0',
-    border: 'none',
-    padding: '5px 10px',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    marginTop: '10px',
-    fontSize: '14px',
+    background: "#f0f0f0",
+    border: "none",
+    padding: "5px 10px",
+    borderRadius: "5px",
+    cursor: "pointer",
+    marginTop: "10px",
+    fontSize: "14px",
   },
   deleteButton: {
-    position: 'absolute',
+    position: "absolute",
     right: 10,
     top: 10,
-    color: 'red',
-    cursor: 'pointer',
+    color: "red",
+    cursor: "pointer",
   },
 }));
 
 const UserBlogs = () => {
   const classes = useStyles();
   const [user, setUser] = useState();
-  const id = localStorage.getItem('userId');
+  const id = localStorage.getItem("userId");
 
   const sendRequest = async () => {
     const res = await axios

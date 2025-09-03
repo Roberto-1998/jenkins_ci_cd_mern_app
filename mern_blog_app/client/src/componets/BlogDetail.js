@@ -1,17 +1,17 @@
-import { Button, InputLabel, TextField, Typography } from '@mui/material';
-import { Box } from '@mui/system';
-import axios from 'axios';
-import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import config from '../config';
+import { Button, InputLabel, TextField, Typography } from "@mui/material";
+import { Box } from "@mui/system";
+import axios from "axios";
+import React, { useEffect, useState, useCallback } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import config from "../config";
 
-const labelStyles = { mb: 1, mt: 2, fontSize: '24px', fontWeight: 'bold' };
+const labelStyles = { mb: 1, mt: 2, fontSize: "24px", fontWeight: "bold" };
 
 const BlogDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  const [inputs, setInputs] = useState({ title: '', description: '' });
+  const [inputs, setInputs] = useState({ title: "", description: "" });
   const [blog, setBlog] = useState(null);
 
   const handleChange = (e) => {
@@ -28,11 +28,11 @@ const BlogDetail = () => {
       const data = res.data;
       setBlog(data.blog);
       setInputs({
-        title: data.blog.title || '',
-        description: data.blog.description || '',
+        title: data.blog.title || "",
+        description: data.blog.description || "",
       });
     } catch (err) {
-      console.error('Failed to fetch blog details:', err);
+      console.error("Failed to fetch blog details:", err);
     }
   }, [id]);
 
@@ -48,16 +48,17 @@ const BlogDetail = () => {
       });
       return res.data;
     } catch (err) {
-      console.error('Failed to update blog:', err);
+      console.error("Failed to update blog:", err);
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    sendRequest().then((data) => {
-      console.log('Blog updated:', data);
-      navigate('/myBlogs/');
-    });
+    sendRequest()
+      .then((data) => {
+        console.log("Blog updated:", data);
+        navigate("/myBlogs/");
+      });
   };
 
   return (
@@ -70,18 +71,18 @@ const BlogDetail = () => {
             borderRadius={10}
             boxShadow="10px 10px 20px #ccc"
             padding={3}
-            margin={'auto'}
+            margin={"auto"}
             marginTop={3}
             display="flex"
-            flexDirection={'column'}
-            width={'80%'}
+            flexDirection={"column"}
+            width={"80%"}
           >
             <Typography
-              fontWeight={'bold'}
+              fontWeight={"bold"}
               padding={3}
               color="grey"
               variant="h2"
-              textAlign={'center'}
+              textAlign={"center"}
             >
               Update Blog
             </Typography>

@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { authActions, setDarkmode } from '../store';
+import React, { useEffect,useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { authActions, setDarkmode } from "../store";
 import {
   AppBar,
   Typography,
@@ -9,11 +9,11 @@ import {
   Button,
   Tabs,
   Tab,
-} from '@mui/material';
-import { useDispatch, useSelector } from 'react-redux';
-import DarkModeIcon from '@mui/icons-material/DarkMode';
-import LightModeIcon from '@mui/icons-material/LightMode';
-import { lightTheme, darkTheme } from '../utils/theme';
+} from "@mui/material";
+import { useDispatch, useSelector } from "react-redux";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import LightModeIcon from "@mui/icons-material/LightMode";
+import { lightTheme, darkTheme } from "../utils/theme";
 
 const Header = () => {
   const dispatch = useDispatch();
@@ -27,45 +27,45 @@ const Header = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const savedTab = localStorage.getItem('selectedTab');
-    const savedTheme = localStorage.getItem('isDarkMode');
+    const savedTab = localStorage.getItem("selectedTab");
+    const savedTheme = localStorage.getItem("isDarkMode");
     if (savedTab !== null) {
       setValue(parseInt(savedTab, 10));
     }
     if (savedTheme !== null) {
-      dispatch(setDarkmode(JSON.parse(savedTheme)));
+      dispatch(setDarkmode(JSON.parse(savedTheme))); 
     }
-  }, [dispatch]);
+  }, []);
   useEffect(() => {
     const path = location.pathname;
-    if (path.startsWith('/blogs/add')) {
+    if (path.startsWith("/blogs/add")) {
       setValue(2);
-    } else if (path.startsWith('/myBlogs')) {
+    } else if (path.startsWith("/myBlogs")) {
       setValue(1);
-    } else if (path.startsWith('/blogs')) {
+    } else if (path.startsWith("/blogs")) {
       setValue(0);
     } else {
-      setValue(0);
+      setValue(0); 
     }
   }, [location.pathname]);
 
   const handleTabChange = (e, newValue) => {
     setValue(newValue);
-    localStorage.setItem('selectedTab', newValue);
+    localStorage.setItem("selectedTab", newValue); 
   };
 
   const handleDarkModeToggle = () => {
     const newTheme = !isDark;
-    localStorage.setItem('isDarkMode', newTheme);
-    dispatch(setDarkmode(newTheme));
-  };
+    localStorage.setItem("isDarkMode", newTheme); 
+    dispatch(setDarkmode(newTheme)); 
+  }
 
   const handleLoginClick = () => {
-    navigate('/login', { state: { isSignupButtonPressed: false } });
+    navigate("/login", { state: { isSignupButtonPressed: false } });
   };
 
   const handleSignupClick = () => {
-    navigate('/login', { state: { isSignupButtonPressed: true } });
+    navigate("/login", { state: { isSignupButtonPressed: true } });
   };
 
   return (
@@ -73,8 +73,12 @@ const Header = () => {
       <Toolbar>
         <Typography variant="h4">BlogsApp</Typography>
         {isLoggedIn && (
-          <Box display="flex" marginLeft={'auto'} marginRight="auto">
-            <Tabs textColor="inherit" value={value} onChange={handleTabChange}>
+          <Box display="flex" marginLeft={"auto"} marginRight="auto">
+            <Tabs
+              textColor="inherit"
+              value={value}
+              onChange={handleTabChange}
+            >
               <Tab LinkComponent={Link} to="/blogs" label="All Blogs" />
               <Tab LinkComponent={Link} to="/myBlogs" label="My Blogs" />
               <Tab LinkComponent={Link} to="/blogs/add" label="Add Blog" />
@@ -88,8 +92,8 @@ const Header = () => {
                 onClick={handleLoginClick}
                 sx={{
                   margin: 1,
-                  fontWeight: 'bold',
-                  color: 'white',
+                  fontWeight: "bold",
+                  color: "white",
                   borderRadius: 10,
                 }}
               >
@@ -99,8 +103,8 @@ const Header = () => {
                 onClick={handleSignupClick}
                 sx={{
                   margin: 1,
-                  fontWeight: 'bold',
-                  color: 'white',
+                  fontWeight: "bold",
+                  color: "white",
                   borderRadius: 10,
                 }}
               >
@@ -124,9 +128,9 @@ const Header = () => {
           <div
             onClick={handleDarkModeToggle}
             style={{
-              alignContent: 'center',
-              padding: '10px 0',
-              cursor: 'pointer',
+              alignContent: "center",
+              padding: "10px 0",
+              cursor: "pointer",
             }}
           >
             {isDark ? <LightModeIcon /> : <DarkModeIcon />}

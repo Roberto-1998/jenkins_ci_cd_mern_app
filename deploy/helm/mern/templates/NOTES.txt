@@ -1,3 +1,0 @@
-Author: Roberto Castellón García
-Comments: People think I have a superpower... dude... it's just DevOps and cloud engineering stuff.
-Ingress Host: mernapp.rcginfo.xyz
