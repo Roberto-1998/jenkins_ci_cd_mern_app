@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.backend_app.deployment_name }}
+  labels:
+    app: {{ .Values.backend_app.name }}
+    tier: {{ .Values.backend_app.tier }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Values.backend_app.name }}
+      tier: {{ .Values.backend_app.tier }}
+  replicas: {{ .Values.backend_app.replicas }}
+  template:
+    metadata:
+      name: {{ .Values.backend_app.name }}
+      labels:
+        app: {{ .Values.backend_app.name }}
+        tier: {{ .Values.backend_app.tier }}
+    spec:
+      containers:
+        - name: {{ .Values.backend_app.name }}
+          image:  "{{ .Values.backend_app.image.name }}:{{ .Values.backend_app.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.backend_app.port.number }}
+              name: {{ .Values.backend_app.port.name }}
+          env:
+            - name: MONGO_URI  
+              valueFrom: 
+                secretKeyRef:
+                  name: db-secret
+                  key: MONGO_URI
+          resources:
+            requests:
+              cpu: {{ .Values.backend_app.resources.requests.cpu }}
+              memory: {{ .Values.backend_app.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.backend_app.resources.limits.cpu }}
+              memory: {{ .Values.backend_app.resources.limits.memory }}
+      initContainers:
+        - name: init-db
+          image: busybox:1.28
+          command:
+            - sh
+            - -c
+            - >
+              until nc -z db-app 27017;
+              do echo "waiting for MongoDB..."; sleep 2; done
+
+                
