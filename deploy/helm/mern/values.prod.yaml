@@ -1,0 +1,15 @@
+backend_app:
+  replicas: 2
+
+frontend_app:
+  replicas: 2
+
+db_app:
+  replicas: 2
+   
+secret:
+  stringData:
+    MONGO_INITDB_ROOT_USERNAME: supermongoadmin
+    MONGO_INITDB_ROOT_PASSWORD: supermongosecret
+    MONGO_URI: "mongodb://supermongoadmin:supermongosecret@db-app:27017/BlogApp?authSource=admin"
+  
