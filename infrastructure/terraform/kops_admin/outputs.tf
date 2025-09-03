@@ -13,3 +13,7 @@ output "s3_bucket_name" {
 output "kops_server_admin_keypair_path" {
   value = var.kops_admin_server_key_path
 }
+
+output "kops_server_admin_public_ip" {
+  value = module.kops_admin_server.instance_public_ip
+}
