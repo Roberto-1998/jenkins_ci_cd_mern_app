@@ -1,0 +1,123 @@
+---
+- name: Prep EC2 for kOps management
+  hosts: kops
+  become: true
+  vars:
+    kubectl_version: "v1.30.4"   # ajusta si usas otra versión de K8s
+    kops_version:    "v1.30.1"   # compat. con K8s 1.28–1.30
+    arch: "amd64"
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install base packages
+      apt:
+        name:
+          - curl
+          - unzip
+          - ca-certificates
+          - bash-completion
+        state: present
+
+    # ---------- AWS CLI v2 ----------
+    - name: Check if awscli v2 already installed
+      shell: aws --version | grep -q 'aws-cli/2'
+      register: awscli_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Download AWS CLI v2 bundle
+      get_url:
+        url: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip
+        dest: /tmp/awscliv2.zip
+        mode: "0644"
+      when: awscli_check.rc != 0
+
+    - name: Unzip AWS CLI v2 bundle
+      unarchive:
+        src: /tmp/awscliv2.zip
+        dest: /tmp
+        remote_src: true
+      when: awscli_check.rc != 0
+
+    - name: Install AWS CLI v2
+      command: /tmp/aws/install
+      args:
+        creates: /usr/local/bin/aws
+      when: awscli_check.rc != 0
+
+    # ---------- kubectl ----------
+    - name: Download kubectl {{ kubectl_version }}
+      get_url:
+        url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/{{ arch }}/kubectl"
+        dest: /usr/local/bin/kubectl
+        mode: "0755"
+
+    - name: Enable kubectl bash completion
+      shell: kubectl completion bash > /etc/bash_completion.d/kubectl
+      args:
+        creates: /etc/bash_completion.d/kubectl
+
+# --- Upgrade kOps to the target version (idempotent) ---
+    - name: Set target kOps version
+      vars:
+        kops_version_target: "1.30.1"   # override with -e if you want
+      block:
+        - name: Find all kops binaries in PATH
+          shell: which -a kops || true
+          register: kops_paths
+          changed_when: false
+
+        - name: Show currently resolved kops path(s)
+          debug:
+            var: kops_paths.stdout_lines
+
+        - name: Check current kOps version (if present)
+          shell: kops version --short | sed 's/^v//'
+          register: kops_current
+          changed_when: false
+          failed_when: false
+
+        - name: Download target kOps if missing or outdated
+          get_url:
+            url: "https://github.com/kubernetes/kops/releases/download/v{{ kops_version_target }}/kops-linux-amd64"
+            dest: /usr/local/bin/kops
+            mode: "0755"
+            force: yes        # overwrite even if exists
+          when: kops_current.rc != 0 or (kops_current.stdout | default('') != kops_version_target)
+
+        - name: Verify kOps version after update
+          shell: kops version --short
+          register: kops_after
+          changed_when: false
+
+        - name: Ensure bash completion for kOps
+          shell: kops completion bash > /etc/bash_completion.d/kops
+          args:
+            creates: /etc/bash_completion.d/kops
+
+
+    # ---------- Conveniences ----------
+    - name: Ensure .kube dir for ubuntu user
+      file:
+        path: /home/ubuntu/.kube
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"
+
+    - name: Show installed versions
+      shell: |
+        set -e
+        echo "aws: $(aws --version 2>&1)"
+        echo "kubectl: $(kubectl version --client --output=yaml | head -n 3)"
+        echo "kops: $(kops version)"
+      register: versions_out
+      changed_when: false
+
+    - name: Print versions
+      debug:
+        msg: "{{ versions_out.stdout_lines }}"

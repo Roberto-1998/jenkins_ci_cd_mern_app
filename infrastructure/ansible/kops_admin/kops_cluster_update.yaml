@@ -1,0 +1,65 @@
+---
+- name: Update/Apply kOps cluster
+  hosts: kops
+  become: true
+
+  vars:
+    aws_region: "us-east-1"
+    state_bucket_name: "kops-state-o4buwa56"
+    cluster_name: "kubeapp.rcginfo.xyz"
+    validation_wait: "5m"
+    do_rolling_update: true   # ponlo en false si no quieres rolling update
+
+  tasks:
+    - name: Verify role credentials (STS)
+      shell: aws sts get-caller-identity --output json
+      register: sts_identity
+      changed_when: false
+    - fail:
+        msg: "No AWS role credentials available on this EC2."
+      when: sts_identity.rc != 0
+
+    - name: Ensure state bucket exists
+      shell: aws s3api head-bucket --bucket "{{ state_bucket_name }}"
+      register: head_bucket
+      failed_when: head_bucket.rc != 0
+      changed_when: false
+
+    - name: Ensure cluster exists
+      shell: kops get cluster --name "{{ cluster_name }}"
+      environment:
+        AWS_REGION: "{{ aws_region }}"
+        KOPS_STATE_STORE: "s3://{{ state_bucket_name }}"
+      register: kops_get
+      failed_when: kops_get.rc != 0
+      changed_when: false
+
+    - name: Apply/update cluster
+      shell: kops update cluster --name "{{ cluster_name }}" --yes
+      environment:
+        AWS_REGION: "{{ aws_region }}"
+        KOPS_STATE_STORE: "s3://{{ state_bucket_name }}"
+      changed_when: true
+
+    - name: Validate cluster
+      shell: kops validate cluster --name "{{ cluster_name }}" --wait {{ validation_wait }}
+      environment:
+        AWS_REGION: "{{ aws_region }}"
+        KOPS_STATE_STORE: "s3://{{ state_bucket_name }}"
+      changed_when: false
+
+    - name: Rolling update (optional)
+      shell: kops rolling-update cluster --name "{{ cluster_name }}" --yes
+      environment:
+        AWS_REGION: "{{ aws_region }}"
+        KOPS_STATE_STORE: "s3://{{ state_bucket_name }}"
+      when: do_rolling_update
+      changed_when: true
+
+    - name: Export kubeconfig for ubuntu
+      become_user: ubuntu
+      shell: kops export kubeconfig --name "{{ cluster_name }}" --admin
+      environment:
+        AWS_REGION: "{{ aws_region }}"
+        KOPS_STATE_STORE: "s3://{{ state_bucket_name }}"
+      changed_when: true

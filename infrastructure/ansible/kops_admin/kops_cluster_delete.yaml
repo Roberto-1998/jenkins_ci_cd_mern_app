@@ -1,0 +1,62 @@
+---
+- name: Delete kOps cluster (with confirmation)
+  hosts: kops
+  become: true
+
+  vars:
+    aws_region: "us-east-1"
+    state_bucket_name: "kops-state-o4buwa56"
+    cluster_name: "kubeapp.rcginfo.xyz"
+
+  tasks:
+    - name: Verify role credentials (STS)
+      shell: aws sts get-caller-identity --output json
+      register: sts_identity
+      changed_when: false
+    - fail:
+        msg: "No AWS role credentials available on this EC2."
+      when: sts_identity.rc != 0
+
+    - name: Check if cluster exists
+      shell: kops get cluster --name "{{ cluster_name }}"
+      environment:
+        AWS_REGION: "{{ aws_region }}"
+        KOPS_STATE_STORE: "s3://{{ state_bucket_name }}"
+      register: kops_get
+      failed_when: false
+      changed_when: false
+
+    - name: Skip if cluster is already gone
+      debug:
+        msg: "Cluster {{ cluster_name }} not found; nothing to delete."
+      when: kops_get.rc != 0
+
+    - block:
+        - name: Confirm deletion
+          pause:
+            prompt: "Type YES to delete cluster {{ cluster_name }} (this is destructive)"
+          register: confirm
+
+        - name: Abort unless user typed YES
+          fail:
+            msg: "Deletion aborted by user."
+          when: confirm.user_input | default('') | upper != 'YES'
+
+        - name: Delete cluster
+          shell: kops delete cluster --name "{{ cluster_name }}" --yes
+          environment:
+            AWS_REGION: "{{ aws_region }}"
+            KOPS_STATE_STORE: "s3://{{ state_bucket_name }}"
+          changed_when: true
+
+        - name: Wait until cluster is gone
+          shell: kops get cluster --name "{{ cluster_name }}"
+          environment:
+            AWS_REGION: "{{ aws_region }}"
+            KOPS_STATE_STORE: "s3://{{ state_bucket_name }}"
+          register: deletion_check
+          failed_when: false
+          retries: 40
+          delay: 15
+          until: deletion_check.rc != 0
+      when: kops_get.rc == 0

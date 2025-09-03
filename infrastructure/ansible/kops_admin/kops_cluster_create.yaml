@@ -1,0 +1,207 @@
+---
+- name: Create/Update kOps cluster and install Ingress-NGINX
+  hosts: kops
+  become: true
+
+  vars:
+    # ==== config according to your environment ====
+    aws_region: "us-east-1"
+    state_bucket_name: "kops-state-o4buwa56"
+    cluster_name: "kubeapp.rcginfo.xyz"
+    zones: "us-east-1a,us-east-1b"
+    node_count: 1
+    node_size: "t3.small"
+    control_plane_size: "t3.small"
+    node_volume_gb: 12
+    control_plane_volume_gb: 12
+    kubernetes_version: "1.30.4"
+    networking: "calico"
+    ssh_public_key_path: "/home/ubuntu/.ssh/kops_admin_server_key.pub"
+
+    # Ingress NGINX for AWS compatible with K8s 1.30
+    ingress_manifest: "https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.11.5/deploy/static/provider/aws/deploy.yaml"
+
+  tasks:
+    # --- Pre comprobation (no installing) ---
+    - name: Verify role credentials (STS)
+      shell: aws sts get-caller-identity --output json
+      register: sts_identity
+      changed_when: false
+
+    - name: Fail if Instance Profile/credentials are not available
+      fail:
+        msg: "No AWS role credentials available on this EC2."
+      when: sts_identity.rc != 0
+
+    - name: Check that state bucket exists
+      shell: aws s3api head-bucket --bucket "{{ state_bucket_name }}"
+      register: head_bucket
+      failed_when: false
+      changed_when: false
+
+    - name: Fail if state bucket is missing
+      fail:
+        msg: "State bucket s3://{{ state_bucket_name }} not found. Create it first."
+      when: head_bucket.rc != 0
+
+    # --- kOps cluster ---
+    - name: Check if kOps cluster exists
+      shell: kops get cluster --name "{{ cluster_name }}"
+      environment:
+        AWS_REGION: "{{ aws_region }}"
+        KOPS_STATE_STORE: "s3://{{ state_bucket_name }}"
+      register: kops_get
+      failed_when: false
+      changed_when: false
+
+    # === Create a .pub file from the EC2's authorized_keys ===
+    - name: Ensure .ssh dir exists
+      file:
+        path: /home/ubuntu/.ssh
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0700"
+    
+    - name: Read authorized_keys
+      slurp:
+        src: /home/ubuntu/.ssh/authorized_keys
+      register: ak
+      become: true
+    
+    - name: Extract first SSH key line
+      set_fact:
+        ec2_pubkey: "{{ (ak.content | b64decode).splitlines() | select('match', '^(ssh-|ecdsa|sk-ssh)') | list | first | default('') }}"
+    
+    - name: Fail if no SSH public key found in authorized_keys
+      fail:
+        msg: "No SSH public key found in /home/ubuntu/.ssh/authorized_keys"
+      when: ec2_pubkey == ""
+    
+    - name: Write kops public key file
+      copy:
+        dest: /home/ubuntu/.ssh/kops_admin_server_key.pub
+        content: "{{ ec2_pubkey }}\n"
+        owner: ubuntu
+        group: ubuntu
+        mode: "0644"
+    
+
+
+    - name: Create kOps cluster (only if missing)
+      shell: |
+        kops create cluster \
+          --name "{{ cluster_name }}" \
+          --zones "{{ zones }}" \
+          --node-count "{{ node_count }}" \
+          --node-size "{{ node_size }}" \
+          --control-plane-size "{{ control_plane_size }}" \
+          --node-volume-size "{{ node_volume_gb }}" \
+          --control-plane-volume-size "{{ control_plane_volume_gb }}" \
+          --kubernetes-version "{{ kubernetes_version }}" \
+          --dns-zone "{{ cluster_name }}" \
+          --ssh-public-key "{{ ssh_public_key_path }}"
+      environment:
+        AWS_REGION: "{{ aws_region }}"
+        KOPS_STATE_STORE: "s3://{{ state_bucket_name }}"
+      when: kops_get.rc != 0
+
+    - name: Apply/Update kOps cluster
+      shell: kops update cluster --name "{{ cluster_name }}" --yes
+      environment:
+        AWS_REGION: "{{ aws_region }}"
+        KOPS_STATE_STORE: "s3://{{ state_bucket_name }}"
+      changed_when: true
+
+    # --- Export kubeconfig admin ANTES de validar ---
+    - name: Ensure .kube dir for ubuntu
+      file:
+        path: /home/ubuntu/.kube
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"
+
+    - name: Export kubeconfig admin
+      become_user: ubuntu
+      shell: kops export kubeconfig --name "{{ cluster_name }}" --admin --kubeconfig /home/ubuntu/.kube/config
+      environment:
+        AWS_REGION: "{{ aws_region }}"
+        KOPS_STATE_STORE: "s3://{{ state_bucket_name }}"
+      changed_when: true
+
+    # (opcional) Verifica que ese kubeconfig tiene permisos admin
+    - name: Check RBAC with admin kubeconfig
+      become_user: ubuntu
+      shell: KUBECONFIG=/home/ubuntu/.kube/config kubectl auth can-i get nodes
+      register: cani_nodes
+      changed_when: false
+
+    - name: Fail if admin kubeconfig cannot list nodes
+      fail:
+        msg: "Admin kubeconfig cannot list nodes: {{ cani_nodes.stdout }}"
+      when: cani_nodes.stdout is defined and cani_nodes.stdout.strip() != "yes"
+
+    - name: Validate cluster (wait up to 5m) using admin kubeconfig
+      become_user: ubuntu
+      environment:
+        AWS_REGION: "{{ aws_region }}"
+        KOPS_STATE_STORE: "s3://{{ state_bucket_name }}"
+        KUBECONFIG: /home/ubuntu/.kube/config
+      shell: kops validate cluster --name "{{ cluster_name }}" --wait 5m
+      changed_when: false
+
+    - name: Ensure .kube dir for ubuntu
+      file:
+        path: /home/ubuntu/.kube
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0755"
+
+    - name: Export kubeconfig for ubuntu user
+      become_user: ubuntu
+      shell: kops export kubeconfig --name "{{ cluster_name }}" --admin
+      environment:
+        AWS_REGION: "{{ aws_region }}"
+        KOPS_STATE_STORE: "s3://{{ state_bucket_name }}"
+      changed_when: true
+
+# --- Ingress NGINX (AWS provider) ---
+    - name: Check if ingress-nginx namespace exists (10s timeout)
+      become_user: ubuntu
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+      shell: kubectl --request-timeout=10s get ns ingress-nginx -o name
+      register: ns_ing
+      failed_when: false
+      changed_when: false
+
+    - name: Install ingress-nginx if missing
+      become_user: ubuntu
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+      shell: kubectl apply -f "{{ ingress_manifest }}"
+      when: ns_ing.rc != 0
+
+    - name: Wait for ingress controller rollout (up to 10m)
+      become_user: ubuntu
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+      shell: kubectl -n ingress-nginx rollout status deploy/ingress-nginx-controller --timeout=10m
+      when: ns_ing.rc != 0
+      changed_when: false
+
+    - name: Show ingress services
+      become_user: ubuntu
+      environment:
+        KUBECONFIG: /home/ubuntu/.kube/config
+      shell: kubectl -n ingress-nginx get svc -o wide || true
+      register: ingress_svcs
+      changed_when: false
+
+    - debug:
+        msg: "{{ ingress_svcs.stdout_lines }}"
+
+
+
