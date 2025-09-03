@@ -1,22 +1,22 @@
-import { combineReducers, configureStore, createSlice } from "@reduxjs/toolkit";
+import { combineReducers, configureStore, createSlice } from '@reduxjs/toolkit';
 
 const authSlice = createSlice({
-  name: "auth",
+  name: 'auth',
   initialState: { isLoggedIn: false },
   reducers: {
     login(state) {
-      console.log("updating");
+      console.log('updating');
       state.isLoggedIn = true;
     },
     logout(state) {
-      localStorage.removeItem("userId");
+      localStorage.removeItem('userId');
       state.isLoggedIn = false;
     },
   },
 });
 
 const themeSlice = createSlice({
-  name: "theme",
+  name: 'theme',
   initialState: {
     isDarkmode: false,
   },

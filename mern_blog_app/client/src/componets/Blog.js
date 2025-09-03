@@ -7,14 +7,14 @@ import {
   CardMedia,
   IconButton,
   Typography,
-} from "@mui/material";
-import React from "react";
-import ModeEditOutlineIcon from "@mui/icons-material/ModeEditOutline";
-import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import { useStyles } from "./utils";
-import config from "../config";
+} from '@mui/material';
+import React from 'react';
+import ModeEditOutlineIcon from '@mui/icons-material/ModeEditOutline';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { useStyles } from './utils';
+import config from '../config';
 const Blogs = ({ title, desc, img, user, isUser, id }) => {
   const classes = useStyles();
   const navigate = useNavigate();
@@ -30,27 +30,27 @@ const Blogs = ({ title, desc, img, user, isUser, id }) => {
   };
   const handleDelete = () => {
     deleteRequest()
-      .then(() => navigate("/"))
-      .then(() => navigate("/blogs"));
+      .then(() => navigate('/'))
+      .then(() => navigate('/blogs'));
   };
   return (
     <div>
-      {" "}
+      {' '}
       <Card
         sx={{
-          width: "40%",
-          margin: "auto",
+          width: '40%',
+          margin: 'auto',
           mt: 2,
           padding: 2,
-          boxShadow: "5px 5px 10px #ccc",
-          ":hover": {
-            boxShadow: "10px 10px 20px #ccc",
+          boxShadow: '5px 5px 10px #ccc',
+          ':hover': {
+            boxShadow: '10px 10px 20px #ccc',
           },
         }}
       >
         {isUser && (
           <Box display="flex">
-            <IconButton onClick={handleEdit} sx={{ marginLeft: "auto" }}>
+            <IconButton onClick={handleEdit} sx={{ marginLeft: 'auto' }}>
               <ModeEditOutlineIcon color="warning" />
             </IconButton>
             <IconButton onClick={handleDelete}>
@@ -62,10 +62,10 @@ const Blogs = ({ title, desc, img, user, isUser, id }) => {
           avatar={
             <Avatar
               className={classes.font}
-              sx={{ bgcolor: "red" }}
+              sx={{ bgcolor: 'red' }}
               aria-label="recipe"
             >
-              {user ? user.charAt(0) : ""}
+              {user ? user.charAt(0) : ''}
             </Avatar>
           }
           title={title}
@@ -80,7 +80,7 @@ const Blogs = ({ title, desc, img, user, isUser, id }) => {
             variant="body2"
             color="text.secondary"
           >
-            <b>{user}</b> {": "} {desc}
+            <b>{user}</b> {': '} {desc}
           </Typography>
         </CardContent>
       </Card>

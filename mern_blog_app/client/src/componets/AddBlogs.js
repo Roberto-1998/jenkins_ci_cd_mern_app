@@ -1,20 +1,20 @@
-import { Box, Button, InputLabel, TextField, Typography } from "@mui/material";
-import axios from "axios";
-import TextareaAutosize from "@mui/material/TextareaAutosize";
-import config from "../config";
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useStyles } from "./utils";
-import placeholderImg from "../../src/placeholder.jpg"
+import { Box, Button, InputLabel, TextField, Typography } from '@mui/material';
+import axios from 'axios';
+import TextareaAutosize from '@mui/material/TextareaAutosize';
+import config from '../config';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useStyles } from './utils';
+import placeholderImg from '../../src/placeholder.jpg';
 
-const labelStyles = { mb: 1, mt: 2, fontSize: "24px", fontWeight: "bold" };
+const labelStyles = { mb: 1, mt: 2, fontSize: '24px', fontWeight: 'bold' };
 const AddBlogs = () => {
   const classes = useStyles();
   const navigate = useNavigate();
   const [inputs, setInputs] = useState({
-    title: "",
-    description: "",
-    imageURL: "",
+    title: '',
+    description: '',
+    imageURL: '',
   });
   const handleChange = (e) => {
     setInputs((prevState) => ({
@@ -27,8 +27,8 @@ const AddBlogs = () => {
       .post(`${config.BASE_URL}/api/blogs/add`, {
         title: inputs.title,
         desc: inputs.description,
-        img: inputs.imageURL.trim() === "" ? placeholderImg : inputs.imageURL,
-        user: localStorage.getItem("userId"),
+        img: inputs.imageURL.trim() === '' ? placeholderImg : inputs.imageURL,
+        user: localStorage.getItem('userId'),
       })
       .catch((err) => console.log(err));
     const data = await res.data;
@@ -39,7 +39,7 @@ const AddBlogs = () => {
     console.log(inputs);
     sendRequest()
       .then((data) => console.log(data))
-      .then(() => navigate("/blogs"));
+      .then(() => navigate('/blogs'));
   };
   return (
     <div>
@@ -48,18 +48,18 @@ const AddBlogs = () => {
           borderRadius={10}
           boxShadow="10px 10px 20px #ccc"
           padding={3}
-          margin={"auto"}
+          margin={'auto'}
           marginTop={3}
           display="flex"
-          flexDirection={"column"}
-          width={"80%"}
+          flexDirection={'column'}
+          width={'80%'}
         >
           <Typography
             className={classes.font}
             padding={3}
             color="grey"
             variant="h2"
-            textAlign={"center"}
+            textAlign={'center'}
           >
             Post Your Blog
           </Typography>

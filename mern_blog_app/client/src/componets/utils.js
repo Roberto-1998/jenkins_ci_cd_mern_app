@@ -1,6 +1,6 @@
-import { makeStyles } from "@mui/styles";
+import { makeStyles } from '@mui/styles';
 export const useStyles = makeStyles({
   font: {
-    fontFamily: "Roboto !important",
+    fontFamily: 'Roboto !important',
   },
 });

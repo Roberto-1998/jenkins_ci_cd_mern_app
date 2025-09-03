@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Values.db_app.statefulset_name }}
+  labels:
+    app: {{ .Values.db_app.name }}
+    tier: {{ .Values.db_app.tier }}
+spec:
+  serviceName: {{ .Values.db_app.service_name }}
+  replicas: {{ .Values.db_app.replicas }}
+  selector:
+    matchLabels:
+      app:  {{ .Values.db_app.name }}
+      tier: {{ .Values.db_app.tier }}
+  updateStrategy:
+    type: {{ .Values.db_app.update_strategy.type }}
+  template:
+    metadata:
+      name: {{ .Values.db_app.name }}
+      labels:
+        app: {{ .Values.db_app.name }}
+        tier: {{ .Values.db_app.tier }}
+    spec:
+      securityContext:
+        fsGroup: {{ .Values.db_app.securityContext.fsGroup }}
+        fsGroupChangePolicy: {{ .Values.db_app.securityContext.fsGroupChangePolicy }}
+      containers:
+        - name: {{ .Values.db_app.name }}
+          image: "{{ .Values.db_app.image.name }}:{{ .Values.db_app.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.db_app.port.number }}
+              name: {{ .Values.db_app.port.name }}
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.name }}
+                  key: MONGO_INITDB_ROOT_USERNAME
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.name }}
+                  key: MONGO_INITDB_ROOT_PASSWORD
+          volumeMounts:
+            - mountPath: {{ .Values.db_app.volumeMounts.mountPath }}
+              name: {{ .Values.db_app.volumeClaimTemplates.name }}
+          resources:
+            requests:
+              cpu: {{ .Values.db_app.resources.requests.cpu }}
+              memory: {{ .Values.db_app.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.db_app.resources.limits.cpu }}
+              memory: {{ .Values.db_app.resources.limits.memory }}
+  volumeClaimTemplates:
+    - metadata:
+        name: {{ .Values.db_app.volumeClaimTemplates.name }}
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: {{ .Values.db_app.volumeClaimTemplates.storage }}
+  
+   
