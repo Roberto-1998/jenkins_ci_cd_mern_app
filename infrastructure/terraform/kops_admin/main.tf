@@ -1,15 +1,19 @@
+module "public_hosted_zone" {
+  source           = "./modules/route53"
+  hosted_zone_name = "kubeapp.rcginfo.xyz"
+}
 
 
 module "s3_bucket" {
   source         = "./modules/s3"
-  s3_bucket_name = "kops_state-${random_string.kops_key_suffix.result}"
+  s3_bucket_name = "kops-state-${random_string.kops_key_suffix.result}"
 
 }
 
 module "kops_admin_server_key" {
   source   = "./modules/keypair"
   key_name = "kops_admin_server_key"
-  key_path = "~/.ssh/kops_admin_server_key.pub"
+  key_path = var.kops_admin_server_key_path
 }
 
 module "kops_admin_server_sg" {
@@ -33,3 +37,5 @@ module "kops_admin_server" {
   instance_key_name        = module.kops_admin_server_key.key_name
   instance_security_groups = [module.kops_admin_server_sg.security_group_name]
 }
+
+
