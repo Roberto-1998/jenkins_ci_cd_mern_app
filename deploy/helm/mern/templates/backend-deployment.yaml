@@ -10,7 +10,7 @@ spec:
     matchLabels:
       app: {{ .Values.backend_app.name }}
       tier: {{ .Values.backend_app.tier }}
-  replicas: {{ .Values.backend_app.tier }}
+  replicas: {{ .Values.backend_app.replicas }}
   template:
     metadata:
       name: {{ .Values.backend_app.name }}
