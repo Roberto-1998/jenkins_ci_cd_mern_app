@@ -24,7 +24,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'jenkins', url:'https://github.com/Roberto-1998/jenkins_ci_cd_mern_app.git'
+                git branch: 'main', url:'https://github.com/Roberto-1998/jenkins_ci_cd_mern_app.git'
             }
         }
 
@@ -33,7 +33,7 @@ pipeline {
                 script {
                     env.COMMIT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                     env.TS = (env.BUILD_TIMESTAMP ?: sh(script: 'date -u +%Y%m%d%H%M%S', returnStdout: true).trim())
-                    env.BRANCH = (env.BRANCH_NAME ?: 'jenkins').toLowerCase().replaceAll(/[^a-z0-9_.-]/, '-')
+                    env.BRANCH = (env.BRANCH_NAME ?: 'main').toLowerCase().replaceAll(/[^a-z0-9_.-]/, '-')
                     env.TAG = "${env.BRANCH}-${env.COMMIT}-${env.TS}"
                 }
             }
