@@ -5,9 +5,20 @@ pipeline {
         nodejs 'NODE18'
     }
 
+    options {
+        timestamps()
+        ansiColor('xterm')
+        disableConcurrentBuilds()
+        timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '30', artifactNumToKeepStr: '15'))
+        parallelsAlwaysFailFast()
+    }
+
     environment {
         IMAGE_PREFIX = 'masterdevopscloud'
         DOCKERHUB_CREDENTIALS = 'dockerhublogin'
+        DOCKER_BUILDKIT = '1'
+        CI = 'true'
     }
 
     stages {
@@ -17,79 +28,59 @@ pipeline {
             }
         }
 
-        stage('Install Backend Dependencies') {
+        stage('Set Build Vars') {
             steps {
-                dir('mern_blog_app/server') {
-                    sh 'npm ci || npm install || yarn install'
+                script {
+                    env.COMMIT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    env.TS = (env.BUILD_TIMESTAMP ?: sh(script: 'date -u +%Y%m%d%H%M%S', returnStdout: true).trim())
+                    env.BRANCH = (env.BRANCH_NAME ?: 'jenkins').toLowerCase().replaceAll(/[^a-z0-9_.-]/, '-')
+                    env.TAG = "${env.BRANCH}-${env.COMMIT}-${env.TS}"
                 }
             }
         }
 
-/*         stage('Backend Dependency Audit') {
-            steps {
-                dir('mern_blog_app/server') {
-                    sh 'npm audit --audit-level=high'
+        stage('CI - Install, Lint, Test & Build (Parallel)') {
+            parallel {
+                stage('Backend') {
+                    steps {
+                        dir('mern_blog_app/server') {
+                            sh '''
+                                set -e
+                                npm ci || npm install || yarn install
+                                npm run lint
+                                JEST_JUNIT_OUTPUT=./junit.xml npm test -- --watchAll=false --reporters=default --reporters=jest-junit || echo "No backend tests yet"
+                                    '''
+                        }
+                    }
+                    post {
+                        always {
+                            junit allowEmptyResults: true, testResults: 'mern_blog_app/server/junit.xml'
+                            archiveArtifacts artifacts: 'mern_blog_app/server/coverage/**', allowEmptyArchive: true
+                        }
+                    }
                 }
-            }
-        } */
 
-        stage('Lint Backend') {
-            steps {
-                dir('mern_blog_app/server') {
-                    sh 'npm run lint'
-                }
-            }
-        }
-
-        stage('Run Backend Tests') {
-            steps {
-                dir('mern_blog_app/server') {
-                    sh 'npm test -- --watchAll=false || echo "No backend tests yet"'
-                }
-            }
-        }
-
-        stage('Install Frontend Dependencies') {
-            steps {
-                dir('mern_blog_app/client') {
-                    sh 'npm ci || npm install || yarn install'
-                }
-            }
-        }
-
-/*         stage('Frontend Dependency Audit') {
-            steps {
-                dir('mern_blog_app/client') {
-                    sh 'npm audit --audit-level=high'
-                }
-            }
-        } */
-
-        stage('Lint Frontend') {
-            steps {
-                dir('mern_blog_app/client') {
-                    sh 'npm run lint'
-                }
-            }
-        }
-
-        stage('Run Frontend Tests') {
-            steps {
-                dir('mern_blog_app/client') {
-                    sh 'npm test -- --watchAll=false || echo "No frontend tests yet"'
-                }
-            }
-        }
-
-        stage('Build Frontend App') {
-            steps {
-                dir('mern_blog_app/client') {
-                    sh 'npm run build'
-                }
-            }
-            post {
-                success {
-                    archiveArtifacts artifacts: 'mern_blog_app/client/build/**', fingerprint: true
+                stage('Frontend') {
+                    steps {
+                        dir('mern_blog_app/client') {
+                            sh '''
+                                set -e
+                                npm ci || npm install || yarn install
+                                npm run lint
+                                JEST_JUNIT_OUTPUT=./junit.xml npm test -- --watchAll=false --reporters=default --reporters=jest-junit || echo "No frontend tests yet"
+                                npm run build
+                                '''
+                        }
+                    }
+                    post {
+                        always {
+                                junit allowEmptyResults: true, testResults: 'mern_blog_app/client/junit.xml'
+                            archiveArtifacts artifacts: 'mern_blog_app/client/coverage/**', allowEmptyArchive: true
+                        }
+                        success {
+                            archiveArtifacts artifacts: 'mern_blog_app/client/build/**', fingerprint: true
+                        }
+                    }
                 }
             }
         }
@@ -97,19 +88,20 @@ pipeline {
         stage('Docker Build & Push - Backend') {
             steps {
                 script {
-                    def COMMIT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                    def TS = (env.BUILD_TIMESTAMP ?: sh(script: 'date -u +%Y%m%d%H%M%S', returnStdout: true).trim())
-                    def BRANCH = (env.BRANCH_NAME ?: 'jenkins').toLowerCase().replaceAll(/[^a-z0-9_.-]/, '-')
-                    def TAG = "${BRANCH}-${COMMIT}-${TS}"
-
                     def imageName = "${env.IMAGE_PREFIX}/mern-backend"
                     dir('mern_blog_app/server') {
-                        def img = docker.build("${imageName}:${TAG}")
-                        docker.withRegistry('https://index.docker.io/v1/', env.DOCKERHUB_CREDENTIALS) {
-                            img.push(TAG)
-                            img.push(BRANCH)
-                            img.push('latest')
-                        }
+                        sh "docker pull ${imageName}:${BRANCH} || true"
+                        def img = docker.build(
+                            "${imageName}:${TAG}",
+                            "--build-arg BUILDKIT_INLINE_CACHE=1 --cache-from=${imageName}:${BRANCH} -f Dockerfile ."
+                            )
+                            retry(2) {
+                            docker.withRegistry('https://index.docker.io/v1/', env.DOCKERHUB_CREDENTIALS) {
+                                img.push(TAG)
+                                img.push(BRANCH)
+                                if (env.BRANCH_NAME == 'main') { img.push('latest') }
+                            }
+                            }
                     }
                 }
             }
@@ -123,19 +115,20 @@ pipeline {
         stage('Docker Build & Push - Frontend') {
             steps {
                 script {
-                    def COMMIT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                    def TS = (env.BUILD_TIMESTAMP ?: sh(script: 'date -u +%Y%m%d%H%M%S', returnStdout: true).trim())
-                    def BRANCH = (env.BRANCH_NAME ?: 'jenkins').toLowerCase().replaceAll(/[^a-z0-9_.-]/, '-')
-                    def TAG = "${BRANCH}-${COMMIT}-${TS}"
-
                     def imageName = "${env.IMAGE_PREFIX}/mern-frontend"
 
                     dir('mern_blog_app/client') {
-                        def img = docker.build("${imageName}:${TAG}")
-                        docker.withRegistry('https://index.docker.io/v1/', env.DOCKERHUB_CREDENTIALS ) {
-                            img.push(TAG)
-                            img.push(BRANCH)
-                            img.push('latest')
+                        sh "docker pull ${imageName}:${BRANCH} || true"
+                        def img = docker.build(
+                            "${imageName}:${TAG}",
+                             "--build-arg BUILDKIT_INLINE_CACHE=1 --cache-from=${imageName}:${BRANCH} -f Dockerfile ."
+                            )
+                        retry(2) {
+                            docker.withRegistry('https://index.docker.io/v1/', env.DOCKERHUB_CREDENTIALS ) {
+                                img.push(TAG)
+                                img.push(BRANCH)
+                                if (env.BRANCH_NAME == 'main') { img.push('latest') }
+                            }
                         }
                     }
                 }
@@ -148,76 +141,123 @@ pipeline {
         }
 
         stage('CD - Smoke Kube Access') {
+            when { branch 'main' }
             steps {
                 withKubeConfig(credentialsId: 'kubeconfig-jenkins') {
-                    sh 'kubectl config current-context && kubectl get nodes'
+                    sh '''
+                           kubectl config current-context
+                           kubectl auth can-i get pods || (echo "RBAC check failed"; exit 1)
+                           kubectl get nodes
+                         '''
                 }
             }
         }
 
         stage('CD - Helm Upgrade') {
+            when { branch 'main' }
             steps {
-                withKubeConfig(credentialsId: 'kubeconfig-jenkins') {
-                    sh '''
+                retry(2) {
+                    withKubeConfig(credentialsId: 'kubeconfig-jenkins') {
+                        sh """
                         set -e
                         helm upgrade --install mern deploy/helm/mern -n default \
                              --set backend_app.image.name=docker.io/${IMAGE_PREFIX}/mern-backend \
-                             --set backend_app.image.tag=latest \
+                             --set backend_app.image.tag=${TAG} \
                              --set frontend_app.image.name=docker.io/${IMAGE_PREFIX}/mern-frontend \
-                             --set frontend_app.image.tag=latest \
+                             --set frontend_app.image.tag=${TAG} \
                              --set backend_app.resources.requests.cpu=50m \
                              --set backend_app.resources.requests.memory=128Mi \
                              --set frontend_app.resources.requests.cpu=50m \
                              --set frontend_app.resources.requests.memory=64Mi \
                              --set db_app.resources.requests.cpu=100m \
                              --set db_app.resources.requests.memory=256Mi \
-                             --wait --timeout 5m
-                        '''
+                             --wait --atomic --cleanup-on-fail --history-max 10 --timeout 5m
+                       """
+                    }
+                }
+            }
+            post {
+                failure {
+                    withKubeConfig(credentialsId: 'kubeconfig-jenkins') {
+                        sh '''
+                            echo "⏪ Searching for last successful release 'mern'..."
+
+                            if command -v jq >/dev/null 2>&1; then
+                               LAST_GOOD=$(helm history mern -o json | jq -r '[.[] | select(.status == "deployed")] | last | .revision')
+                             else
+                               echo "jq not available; using awk fallback"
+                               LAST_GOOD=$(helm history mern | awk '/deployed/ {rev=$1} END{print rev}')
+                             fi
+
+                            if [ -n "$LAST_GOOD" ]; then
+                              echo "↩️ Doing rollback to release $LAST_GOOD..."
+                              helm rollback mern $LAST_GOOD
+                            else
+                              echo "⚠️ It didn’t find a 'deployed' release to rollback."
+                            fi
+                            '''
+                    }
                 }
             }
         }
 
         stage('Post-Deploy Checks') {
+            when { branch 'main' }
             steps {
                 withKubeConfig(credentialsId: 'kubeconfig-jenkins') {
                     sh '''
-        set -e
+                       set -e
 
-        echo "=== Rollout status ==="
-        kubectl rollout status deploy/backend-deployment  -n default --timeout=180s
-        kubectl rollout status deploy/frontend-deployment -n default --timeout=180s
+                       echo "=== Rollout status ==="
+                       kubectl rollout status deploy/backend-deployment  -n default --timeout=180s
+                       kubectl rollout status deploy/frontend-deployment -n default --timeout=180s
 
-        echo "=== Services & Endpoints (resumen) ==="
-        kubectl get svc -n default
-        kubectl get endpoints -n default
+                       echo "=== Services & Endpoints (resumen) ==="
+                       kubectl get svc -n default
+                       kubectl get endpoints -n default
 
-        echo "=== Ingress ==="
-        # Mostramos el ingress por nombre y, si no existe con ese nombre, listamos todos
-        kubectl get ingress mern-app-ingress -n default -o wide || kubectl get ingress -n default -o wide
+                       echo "=== Ingress ==="
+                       # Mostramos el ingress por nombre y, si no existe con ese nombre, listamos todos
+                       kubectl get ingress mern-app-ingress -n default -o wide || kubectl get ingress -n default -o wide
 
-        echo "=== Smoke Test (sin TLS) ==="
-        # Si aún no propagó DNS o la app tarda en levantar, el curl puede fallar; no rompemos el build aquí
-        (curl -f --max-time 15 http://mernapp.rcginfo.xyz/ \
-          || curl -I --max-time 15 http://mernapp.rcginfo.xyz/) || true
-      '''
+                         echo "=== Espera DNS (hasta 6 intentos) ==="
+                        for i in 1 2 3 4 5 6; do nslookup mernapp.rcginfo.xyz && break || sleep 10; done || true
+
+                       echo "=== Smoke Test (sin TLS) ==="
+                       # Si aún no propagó DNS o la app tarda en levantar, el curl puede fallar; no rompemos el build aquí
+                       (curl -f --max-time 15 http://mernapp.rcginfo.xyz/ \
+                         || curl -I --max-time 15 http://mernapp.rcginfo.xyz/) || true
+                        (curl -sf --max-time 15 http://mernapp.rcginfo.xyz/api/health) || true
+
+                     '''
                 }
             }
             post {
                 always {
                     withKubeConfig(credentialsId: 'kubeconfig-jenkins') {
                         sh '''
-          echo "=== Helm release status ==="
-          helm status mern || true
+                              echo "=== Helm release status ==="
+                              helm status mern || true
 
-          echo "=== Pods (estado) ==="
-          kubectl get pods -o wide -n default || true
+                              echo "=== Pods (estado) ==="
+                              kubectl get pods -o wide -n default || true
 
-          echo "=== Últimos eventos (debug rápido) ==="
-          kubectl get events -n default --sort-by=.lastTimestamp | tail -n 50 || true
-        '''
+                              echo "=== Últimos eventos (debug rápido) ==="
+                              kubectl get events -n default --sort-by=.lastTimestamp | tail -n 50 || true
+
+                              echo "=== Guardar manifiestos ==="
+                              helm get manifest mern > helm_manifest.yaml || true
+                              helm get values mern > helm_values.yaml || true
+                            '''
                     }
+                        archiveArtifacts artifacts: 'helm_*.yaml', onlyIfSuccessful: false, allowEmptyArchive: true
                 }
             }
+        }
+    }
+    post {
+        always {
+            cleanWs(deleteDirs: true, notFailBuild: true)
         }
     }
 }

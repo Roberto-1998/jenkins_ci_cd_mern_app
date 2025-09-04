@@ -61,6 +61,7 @@
           - apt-transport-https
           - git
           - unzip
+          - jq
         state: present
 
     - name: Install Jenkins
