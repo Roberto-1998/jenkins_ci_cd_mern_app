@@ -48,7 +48,7 @@ pipeline {
                                 set -e
                                 npm ci || npm install || yarn install
                                 npm run lint
-                                JEST_JUNIT_OUTPUT=./junit.xml npm test -- --watchAll=false --reporters=default --reporters=jest-junit || echo "No backend tests yet"
+                                JEST_JUNIT_OUTPUT=./junit.xml npm test -- --watchAll=false --reporters=default --reporters=jest-junit --coverage || echo "No backend tests yet"
                                     '''
                         }
                     }
@@ -67,7 +67,7 @@ pipeline {
                                 set -e
                                 npm ci || npm install || yarn install
                                 npm run lint
-                                JEST_JUNIT_OUTPUT=./junit.xml npm test -- --watchAll=false --reporters=default --reporters=jest-junit || echo "No frontend tests yet"
+                                JEST_JUNIT_OUTPUT=./junit.xml npm test -- --watchAll=false --reporters=default --reporters=jest-junit --coverage || echo "No frontend tests yet"
                                 npm run build
                                 '''
                         }
