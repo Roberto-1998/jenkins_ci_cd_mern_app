@@ -170,7 +170,7 @@ pipeline {
                              --set frontend_app.resources.requests.cpu=50m \
                              --set frontend_app.resources.requests.memory=64Mi \
                              --set db_app.resources.requests.cpu=100m \
-                             --set db_app.resources.requests.memory=256Mi
+                             --set db_app.resources.requests.memory=256Mi \
                              --wait --timeout 5m
                         '''
                 }
