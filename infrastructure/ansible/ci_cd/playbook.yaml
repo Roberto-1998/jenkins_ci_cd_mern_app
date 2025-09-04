@@ -2,6 +2,10 @@
 - name: Setup Jenkins server on Ubuntu 24.04
   hosts: jenkins
   become: true
+  vars:
+    kubectl_version: "v1.30.4"
+    helm_version: "v3.17.3"
+    arch: "amd64"
 
   tasks:
     - name: Ensure keyrings directory exists
@@ -139,3 +143,28 @@
         name: jenkins
         groups: docker
         append: yes       
+    
+    # ---------- kubectl ----------
+    - name: Download kubectl {{ kubectl_version }}
+      get_url:
+        url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/{{ arch }}/kubectl"
+        dest: /usr/local/bin/kubectl
+        mode: "0755"
+
+    - name: Enable kubectl bash completion
+      shell: kubectl completion bash > /etc/bash_completion.d/kubectl
+      args:
+        creates: /etc/bash_completion.d/kubectl
+
+    # ---------- helm ----------=
+    - name: Instalar Helm (Debian/Ubuntu)
+      block:
+      - name: Descargar script oficial get-helm-3
+        get_url:
+          url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+          dest: /usr/local/bin/get-helm-3
+          mode: "0755"
+      - name: Ejecutar instalador de Helm si no existe
+        shell: /usr/local/bin/get-helm-3
+        args:
+          creates: /usr/local/bin/helm
