@@ -7,7 +7,7 @@ pipeline {
 
     environment {
         IMAGE_PREFIX = 'masterdevopscloud'
-        DOCKERHUB_CREDENTIALS = 'dockerhublogin' 
+        DOCKERHUB_CREDENTIALS = 'dockerhublogin'
     }
 
     stages {
@@ -24,7 +24,6 @@ pipeline {
                 }
             }
         }
-
 
         stage('Lint Backend') {
             steps {
@@ -49,7 +48,6 @@ pipeline {
                 }
             }
         }
-
 
         stage('Lint Frontend') {
             steps {
@@ -124,12 +122,19 @@ pipeline {
                             img.push('latest')
                         }
                     }
-
                 }
             }
             post {
                 always {
                     sh 'docker image prune -f || true'
+                }
+            }
+        }
+
+        stage('CD - Smoke Kube Access') {
+            steps {
+                withKubeConfig(credentialsId: 'kubeconfig-jenkins') {
+                    sh 'kubectl config current-context && kubectl get nodes'
                 }
             }
         }
