@@ -162,13 +162,56 @@ pipeline {
         set -e
         helm upgrade --install mern deploy/helm/mern \
           --namespace default --create-namespace \
-          --set backend.image.repository=docker.io/${IMAGE_PREFIX}/mern-backend \
-          --set backend.image.tag=latest \
-          --set frontend.image.repository=docker.io/${IMAGE_PREFIX}/mern-frontend \
-          --set frontend.image.tag=latest \
+          --set backend_app.image.name=docker.io/${IMAGE_PREFIX}/mern-backend \
+          --set backend_app.image.tag=latest \
+          --set frontend_app.image.name=docker.io/${IMAGE_PREFIX}/mern-frontend \
+          --set frontend_app.image.tag=latest \
           --set ingress.className="nginx" \
           --wait --timeout 5m
       '''
+                }
+            }
+        }
+
+        stage('Post-Deploy Checks') {
+            steps {
+                withKubeConfig(credentialsId: 'kubeconfig-jenkins') {
+                    sh '''
+        set -e
+
+        echo "=== Rollout status ==="
+        kubectl rollout status deploy/backend-deployment  -n default --timeout=180s
+        kubectl rollout status deploy/frontend-deployment -n default --timeout=180s
+
+        echo "=== Services & Endpoints (resumen) ==="
+        kubectl get svc -n default
+        kubectl get endpoints -n default
+
+        echo "=== Ingress ==="
+        # Mostramos el ingress por nombre y, si no existe con ese nombre, listamos todos
+        kubectl get ingress mern-app-ingress -n default -o wide || kubectl get ingress -n default -o wide
+
+        echo "=== Smoke Test (sin TLS) ==="
+        # Si aún no propagó DNS o la app tarda en levantar, el curl puede fallar; no rompemos el build aquí
+        (curl -f --max-time 15 http://mernapp.rcginfo.xyz/ \
+          || curl -I --max-time 15 http://mernapp.rcginfo.xyz/) || true
+      '''
+                }
+            }
+            post {
+                always {
+                    withKubeConfig(credentialsId: 'kubeconfig-jenkins') {
+                        sh '''
+          echo "=== Helm release status ==="
+          helm status mern || true
+
+          echo "=== Pods (estado) ==="
+          kubectl get pods -o wide -n default || true
+
+          echo "=== Últimos eventos (debug rápido) ==="
+          kubectl get events -n default --sort-by=.lastTimestamp | tail -n 50 || true
+        '''
+                    }
                 }
             }
         }
