@@ -108,7 +108,7 @@ const Login = () => {
             sx={{ borderRadius: 3, marginTop: 3 }}
             color="warning"
           >
-            Submit
+            Just Submit
           </Button>
           <Button
             onClick={() => setIsSignup(!isSignup)}
