@@ -1,10 +1,10 @@
-import { Box, Button, TextField, Typography } from "@mui/material";
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { useDispatch } from "react-redux";
-import { authActions } from "../store";
-import { useNavigate, useLocation } from "react-router-dom";
-import config from "../config";
+import { Box, Button, TextField, Typography } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { useDispatch } from 'react-redux';
+import { authActions } from '../store';
+import { useNavigate, useLocation } from 'react-router-dom';
+import config from '../config';
 
 const Login = () => {
   const location = useLocation();
@@ -13,9 +13,9 @@ const Login = () => {
   const { isSignupButtonPressed } = location.state || {};
 
   const [inputs, setInputs] = useState({
-    name: "",
-    email: "",
-    password: "",
+    name: '',
+    email: '',
+    password: '',
   });
   const [isSignup, setIsSignup] = useState(isSignupButtonPressed || false);
   const handleChange = (e) => {
@@ -27,8 +27,8 @@ const Login = () => {
   useEffect(() => {
     setIsSignup(isSignupButtonPressed);
   }, [isSignupButtonPressed]);
-  const sendRequest = async (type = "login") => {
-    console.log("inside send req");
+  const sendRequest = async (type = 'login') => {
+    console.log('inside send req');
     console.log(`${config.BASE_URL}/api/users/${type}`);
     const res = await axios
       .post(`${config.BASE_URL}/api/users/${type}`, {
@@ -39,7 +39,7 @@ const Login = () => {
       .catch((err) => console.log(err));
 
     const data = await res.data;
-    console.log("return");
+    console.log('return');
     console.log(data);
     return data;
   };
@@ -48,15 +48,15 @@ const Login = () => {
     e.preventDefault();
     console.log(inputs);
     if (isSignup) {
-      sendRequest("signup")
-        .then((data) => localStorage.setItem("userId", data.user._id))
+      sendRequest('signup')
+        .then((data) => localStorage.setItem('userId', data.user._id))
         .then(() => dispath(authActions.login()))
-        .then(() => naviagte("/blogs"));
+        .then(() => naviagte('/blogs'));
     } else {
       sendRequest()
-        .then((data) => localStorage.setItem("userId", data.user._id))
+        .then((data) => localStorage.setItem('userId', data.user._id))
         .then(() => dispath(authActions.login()))
-        .then(() => naviagte("/blogs"));
+        .then(() => naviagte('/blogs'));
     }
   };
   return (
@@ -65,9 +65,9 @@ const Login = () => {
         <Box
           maxWidth={400}
           display="flex"
-          flexDirection={"column"}
+          flexDirection={'column'}
           alignItems="center"
-          justifyContent={"center"}
+          justifyContent={'center'}
           boxShadow="10px 10px 20px #ccc"
           padding={3}
           margin="auto"
@@ -75,7 +75,7 @@ const Login = () => {
           borderRadius={5}
         >
           <Typography variant="h2" padding={3} textAlign="center">
-            {isSignup ? "Signup" : "Login"}
+            {isSignup ? 'Signup' : 'Login'}
           </Typography>
           {isSignup && (
             <TextField
@@ -85,12 +85,12 @@ const Login = () => {
               placeholder="Name"
               margin="normal"
             />
-          )}{" "}
+          )}{' '}
           <TextField
             name="email"
             onChange={handleChange}
             value={inputs.email}
-            type={"email"}
+            type={'email'}
             placeholder="Email"
             margin="normal"
           />
@@ -98,7 +98,7 @@ const Login = () => {
             name="password"
             onChange={handleChange}
             value={inputs.password}
-            type={"password"}
+            type={'password'}
             placeholder="Password"
             margin="normal"
           />
@@ -114,7 +114,7 @@ const Login = () => {
             onClick={() => setIsSignup(!isSignup)}
             sx={{ borderRadius: 3, marginTop: 3 }}
           >
-            Change To {isSignup ? "Login" : "Signup"}
+            Change To {isSignup ? 'Login' : 'Signup'}
           </Button>
         </Box>
       </form>
