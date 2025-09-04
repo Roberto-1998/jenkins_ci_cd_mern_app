@@ -154,5 +154,23 @@ pipeline {
                 }
             }
         }
+
+        stage('CD - Helm Upgrade') {
+            steps {
+                withKubeConfig(credentialsId: 'kubeconfig-jenkins') {
+                    sh '''
+        set -e
+        helm upgrade --install mern deploy/helm/mern \
+          --namespace default --create-namespace \
+          --set backend.image.repository=docker.io/${IMAGE_PREFIX}/mern-backend \
+          --set backend.image.tag=latest \
+          --set frontend.image.repository=docker.io/${IMAGE_PREFIX}/mern-frontend \
+          --set frontend.image.tag=latest \
+          --set ingress.className="nginx" \
+          --wait --timeout 5m
+      '''
+                }
+            }
+        }
     }
 }
