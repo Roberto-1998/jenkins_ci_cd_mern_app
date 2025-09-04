@@ -159,16 +159,20 @@ pipeline {
             steps {
                 withKubeConfig(credentialsId: 'kubeconfig-jenkins') {
                     sh '''
-        set -e
-        helm upgrade --install mern deploy/helm/mern \
-          --namespace default --create-namespace \
-          --set backend_app.image.name=docker.io/${IMAGE_PREFIX}/mern-backend \
-          --set backend_app.image.tag=latest \
-          --set frontend_app.image.name=docker.io/${IMAGE_PREFIX}/mern-frontend \
-          --set frontend_app.image.tag=latest \
-          --set ingress.className="nginx" \
-          --wait --timeout 5m
-      '''
+                        set -e
+                        helm upgrade --install mern deploy/helm/mern -n default \
+                             --set backend_app.image.name=docker.io/${IMAGE_PREFIX}/mern-backend \
+                             --set backend_app.image.tag=latest \
+                             --set frontend_app.image.name=docker.io/${IMAGE_PREFIX}/mern-frontend \
+                             --set frontend_app.image.tag=latest \
+                             --set backend_app.resources.requests.cpu=50m \
+                             --set backend_app.resources.requests.memory=128Mi \
+                             --set frontend_app.resources.requests.cpu=50m \
+                             --set frontend_app.resources.requests.memory=64Mi \
+                             --set db_app.resources.requests.cpu=100m \
+                             --set db_app.resources.requests.memory=256Mi
+                             --wait --timeout 5m
+                        '''
                 }
             }
         }
