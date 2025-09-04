@@ -113,6 +113,21 @@
         KOPS_STATE_STORE: "s3://{{ state_bucket_name }}"
       changed_when: true
 
+    - name: Wait until API DNS resolves
+      shell: "getent hosts api.{{ cluster_name }}"
+      register: dns_ready
+      retries: 30
+      delay: 10
+      until: dns_ready.rc == 0
+    
+    - name: Wait until port 443 of API is reachable
+      shell: "timeout 5 bash -c '</dev/tcp/api.{{ cluster_name }}/443'"
+      register: port_open
+      retries: 30
+      delay: 10
+      until: port_open.rc == 0
+
+
     # --- Export kubeconfig admin ANTES de validar ---
     - name: Ensure .kube dir for ubuntu
       file:
