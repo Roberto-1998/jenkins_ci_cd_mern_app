@@ -1,201 +1,173 @@
-![status](https://img.shields.io/badge/status-WIP-yellow)
+# Helm Chart for MERN App Deployment
 
-# Dockerized MERN Blog Application
+This branch (`helm`) contains a complete Helm chart for deploying a full-stack MERN (MongoDB, Express, React, Node.js) application on a Kubernetes cluster.
 
-This branch contains the **Dockerized setup** of the original MERN Blog App project.  
-The goal was to containerize the entire application (client, server, and database) using **Dockerfiles** and a **docker-compose** configuration.  
-
-We built everything from scratch:
-- New **Dockerfiles** for the client and the server.
-- A **docker-compose.yaml** file to orchestrate all services and enable smooth communication.
-- A `.env` file to centralize environment variables.
+> GitHub Branch: [`helm`](https://github.com/Roberto-1998/jenkins_ci_cd_mern_app/tree/helm)
 
 ---
 
-## 📦 Project Structure
+## 🚀 Why Helm?
 
-```
-mern_blog_app
-├── client
-│   ├── Dockerfile
-│   ├── nginx.conf
-│   ├── package.json
-│   └── src/...
-├── server
-│   ├── Dockerfile
-│   ├── server.js
-│   └── routes/...
-├── docker-compose.yaml
-├── .env
-└── README.md
-```
+**Helm** is the package manager for Kubernetes. It allows us to define, install, and upgrade complex Kubernetes applications using reusable, versioned charts.
+
+### Benefits of using Helm
+
+✅ **Templating**: DRY and reusable manifests with dynamic values  
+✅ **Separation of config and logic**: Through `values.yaml`  
+✅ **Version control**: Easily upgrade or rollback releases  
+✅ **Reproducibility**: Install the same stack in different environments  
+✅ **Standardization**: Share charts across teams or projects
+
+Without Helm, you’d have to manage long, static YAML manifests manually. Helm provides **automation**, **consistency**, and **maintainability**.
 
 ---
 
-## 🐳 Dockerfiles
+## 📁 Chart Structure
 
-### 1. Client (React App with Nginx)
-
-The client uses a **multi-stage build**:
-1. **Node stage** → builds the React app using `npm run build`.
-2. **Nginx stage** → serves the static build files through an Nginx web server.
-
-```dockerfile
-# Stage 1: Build the React app
-FROM node:18-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-
-# Stage 2: Serve with Nginx
-FROM nginx:alpine
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/build /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
 ```
-
-🔑 **Why multi-stage?**  
-It keeps the final image lightweight: only the build output and Nginx are included (not Node or dependencies).
-
----
-
-### 2. Server (Node.js + Express API)
-
-The server runs on **Node.js** and connects to **MongoDB**.  
-
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-EXPOSE 5001
-CMD ["npm", "start"]
+deploy/helm/mern/
+├── Chart.yaml                # Chart metadata (name, version, etc.)
+├── values.yaml              # Default configuration values (dev/local)
+├── values.prod.yaml         # Production-specific overrides
+├── templates/               # Kubernetes manifest templates
+│   ├── backend-deployment.yaml
+│   ├── backend-service.yaml
+│   ├── frontend-deployment.yaml
+│   ├── frontend-service.yaml
+│   ├── frontend-ingress.yaml
+│   ├── db-statefulset.yaml
+│   ├── db-headless-service.yaml
+│   ├── db-secret.yaml
+│   └── NOTES.txt
+└── charts/                  # For chart dependencies (empty here)
 ```
 
 ---
 
-## ⚙️ Application Adjustments
+## 🧱 Components Deployed
 
-During the Dockerization process, some changes were required to make the application run correctly inside containers:
+This Helm chart deploys the following:
 
-1. **Client `package.json`** →  
-   Set `homepage` to `/` (instead of the original subpath).  
+- **MongoDB**
+  - `StatefulSet`: ensures pod identity and persistent storage
+  - `Secret`: stores DB credentials
+  - `Headless Service`: enables DNS-based stable discovery
+- **Backend App** (`Express`)
+  - `Deployment`: manages stateless replicas
+  - `Service`: ClusterIP for internal communication
+- **Frontend App** (`React`)
+  - `Deployment`: React static files served via container
+  - `Service`: ClusterIP
+  - `Ingress`: Exposes frontend over HTTP using NGINX
 
-2. **Client `index.js`** →  
-   Updated `BrowserRouter basename="/"` so React Router works properly inside Nginx.  
-
-3. **API Calls in Client** →  
-   Changed API URLs from container IPs to service names (e.g., `http://server-app:5001/...`) so containers can communicate over Docker’s internal network.  
-
-These changes solved:
-- Blank screen issue due to wrong `basename` and `homepage`.
-- API connection problems (DNS resolution inside Docker network).
+All of these are dynamically configured using Helm templates and values.
 
 ---
 
-## 🐙 Docker Compose Setup
+## ⚙️ Configuration with `values.yaml`
 
-A `docker-compose.yaml` file was created to orchestrate **three services**:
+Helm uses the `values.yaml` file to inject configuration into templates. We maintain two versions:
 
-- **client-app** → React app served via Nginx (port `3000` exposed).
-- **server-app** → Node.js/Express backend (port `5001` exposed).
-- **db-app** → MongoDB database with persistent storage.
+- `values.yaml`: for **development/local testing**
+- `values.prod.yaml`: for **production deployments**
+
+Examples of what you configure:
 
 ```yaml
-services:
-  client-app:
-    build:
-      context: ./client
-      dockerfile: Dockerfile
-    ports:
-      - "3000:80"
-    depends_on:
-      - server-app
-    networks:
-      - blog-net
+replicaCount: 1
 
-  server-app:
-    build:
-      context: ./server
-      dockerfile: Dockerfile
-    env_file:
-      - .env
-    ports:
-      - "5001:5001"
-    depends_on:
-      - db-app
-    networks:
-      - blog-net
+backend_app:
+  image:
+    repository: your-dockerhub-user/backend
+    tag: latest
 
-  db-app:
-    image: mongo
-    container_name: db-app
-    env_file:
-      - .env
-    ports:
-      - "27017:27017"
-    volumes:
-      - dbdata:/data/db
-    networks:
-      - blog-net
+frontend_app:
+  image:
+    repository: your-dockerhub-user/frontend
+    tag: latest
 
-volumes:
-  dbdata:
+db_app:
+  username: admin
+  password: securepassword
+```
 
-networks:
-  blog-net:
-    driver: bridge
+This design allows you to use the **same chart** in different environments by simply swapping the values file:
+
+```bash
+# Deploy with dev config
+helm install mern ./mern
+
+# Deploy with prod config
+helm install mern ./mern -f values.prod.yaml
 ```
 
 ---
 
-## 🌍 Environment Variables
+## 📦 Chart.yaml
 
-All sensitive data and database configuration are stored in `.env`:
+```yaml
+apiVersion: v2
+name: mern
+description: A Helm chart to deploy a MERN stack application
+type: application
+version: 0.1.0
+appVersion: 1.0.0
+```
 
-```env
-MONGO_INITDB_ROOT_USERNAME=mongoadmin
-MONGO_INITDB_ROOT_PASSWORD=secret
-MONGO_URI=mongodb://mongoadmin:secret@db-app:27017/BlogApp?authSource=admin
+This file is the chart’s metadata. It declares this as an **application** (not a library chart), with semantic versions for Helm tracking.
+
+---
+
+## 📝 NOTES.txt
+
+This file gives post-install instructions such as:
+
+- Access URLs
+- How to check service status
+- Reminder to configure DNS if using an Ingress
+
+It’s automatically printed by Helm after install/upgrade.
+
+---
+
+## 🚀 Installing the Chart
+
+```bash
+cd deploy/helm
+
+# Dry-run
+helm install mern ./mern --dry-run
+
+# Actual deployment (default values)
+helm install mern ./mern
+
+# Using production values
+helm install mern ./mern -f mern/values.prod.yaml
+```
+
+To upgrade:
+
+```bash
+helm upgrade mern ./mern -f mern/values.prod.yaml
+```
+
+To uninstall:
+
+```bash
+helm uninstall mern
 ```
 
 ---
 
-## 📊 Architecture Overview
+## 📚 Summary
 
-- **Client** → React app, built with Node, served with Nginx.  
-- **Server** → Express.js API, connects to MongoDB.  
-- **Database** → MongoDB with persistent volume.  
-- **Networking** → All services communicate through a private Docker network (`blog-net`).  
-- **Persistence** → MongoDB data is stored in a named Docker volume (`dbdata`).  
+| Feature        | Without Helm                         | With Helm                           |
+|----------------|--------------------------------------|--------------------------------------|
+| Deployment     | Manual, repetitive YAML              | Templated, reusable manifests        |
+| Configuration  | Hardcoded in each manifest           | Centralized in `values.yaml`        |
+| Environments   | Requires separate manifest copies    | Same chart, different values         |
+| Versioning     | Manual tracking                      | Built-in rollback and history        |
+| Maintenance    | Error-prone                          | Scalable and maintainable            |
 
----
+Using Helm was a major improvement for deploying this project into Kubernetes clusters. It brought **clarity**, **automation**, and **production readiness**.
 
-## ▶️ How to Run
-
-1. Build and start all services:
-   ```bash
-   docker-compose up --build
-   ```
-
-2. Access the application:
-   - Client (React + Nginx) → [http://localhost:3000](http://localhost:3000)  
-   - Server (Express API) → [http://localhost:5001](http://localhost:5001)  
-   - Database (MongoDB) → exposed at `mongodb://mongoadmin:secret@localhost:27017/BlogApp?authSource=admin`
-
----
-
-## ✅ Summary
-
-This branch demonstrates how to:
-- Containerize an existing MERN app with Docker.
-- Use **multi-stage builds** for production-ready React apps.
-- Run Node.js server and MongoDB inside containers.
-- Fix common issues when containerizing existing apps (React Router `basename`, API DNS resolution).
-- Use `docker-compose` to integrate multiple services with environment variables, volumes, and a shared private network.
-
-This setup provides a **production-like environment** that is portable, isolated, and easy to run with a single command.
