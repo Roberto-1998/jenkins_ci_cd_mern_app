@@ -1,4 +1,3 @@
-![status](https://img.shields.io/badge/status-WIP-yellow)
 
 # Dockerized MERN Blog Application
 
@@ -108,6 +107,7 @@ A `docker-compose.yaml` file was created to orchestrate **three services**:
 ```yaml
 services:
   client-app:
+    container_name: client-app
     build:
       context: ./client
       dockerfile: Dockerfile
@@ -117,8 +117,16 @@ services:
       - server-app
     networks:
       - blog-net
-
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+      start_interval: 5s
+    restart: unless-stopped
   server-app:
+    container_name: server-app
     build:
       context: ./server
       dockerfile: Dockerfile
@@ -127,21 +135,30 @@ services:
     ports:
       - "5001:5001"
     depends_on:
-      - db-app
+      db-app:
+        condition: service_healthy
     networks:
       - blog-net
-
+    restart: unless-stopped
   db-app:
-    image: mongo
     container_name: db-app
+    image: mongo
     env_file:
       - .env
     ports:
       - "27017:27017"
     volumes:
-      - dbdata:/data/db
+      - "dbdata:/data/db"
     networks:
       - blog-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh -u $MONGO_INITDB_ROOT_USERNAME -p $MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase admin --eval 'db.adminCommand(\"ping\")' || exit 1"]
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+      start_interval: 5s
 
 volumes:
   dbdata:
