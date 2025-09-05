@@ -1,201 +1,117 @@
-![status](https://img.shields.io/badge/status-WIP-yellow)
+# Infrastructure Automation — Terraform & Ansible
 
-# Dockerized MERN Blog Application
+This branch (`infra`) documents the **infrastructure layer** of the project. It is built using two main tools:
 
-This branch contains the **Dockerized setup** of the original MERN Blog App project.  
-The goal was to containerize the entire application (client, server, and database) using **Dockerfiles** and a **docker-compose** configuration.  
-
-We built everything from scratch:
-- New **Dockerfiles** for the client and the server.
-- A **docker-compose.yaml** file to orchestrate all services and enable smooth communication.
-- A `.env` file to centralize environment variables.
+- **Terraform**: To declaratively provision the infrastructure on AWS using a modular architecture.
+- **Ansible**: To configure the provisioned EC2 instances (Jenkins host and Kubernetes admin host) and to manage the lifecycle of the Kubernetes cluster via `kOps`.
 
 ---
 
-## 📦 Project Structure
+## 🏗️ Terraform — Infrastructure as Code (IaC)
 
-```
-mern_blog_app
-├── client
-│   ├── Dockerfile
-│   ├── nginx.conf
-│   ├── package.json
-│   └── src/...
-├── server
-│   ├── Dockerfile
-│   ├── server.js
-│   └── routes/...
-├── docker-compose.yaml
-├── .env
-└── README.md
-```
+In this project, **Terraform** is responsible for provisioning all the necessary AWS infrastructure using a **modular architecture** that promotes reusability, clarity, and scalability.
 
----
+### What we provision with Terraform
 
-## 🐳 Dockerfiles
+We divided the infrastructure into two scopes:
 
-### 1. Client (React App with Nginx)
+1. **kops_admin** (`terraform/kops_admin`)
+   - EC2 instance that will act as the Kubernetes cluster admin.
+   - S3 bucket to store `kOps` state (cluster definitions and artifacts).
+   - Route53 Hosted Zone or records for the cluster domain.
+   - SSH key pair for secure access.
+   - Security groups for admin access.
+   
+2. **ci_cd** (`terraform/ci_cd`)
+   - EC2 instance to run **Jenkins**.
+   - SSH key pair for Jenkins server.
+   - Security groups allowing SSH and HTTP access.
 
-The client uses a **multi-stage build**:
-1. **Node stage** → builds the React app using `npm run build`.
-2. **Nginx stage** → serves the static build files through an Nginx web server.
+### Benefits of Modular Architecture
 
-```dockerfile
-# Stage 1: Build the React app
-FROM node:18-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
+We used a module-based approach (`modules/`) for:
 
-# Stage 2: Serve with Nginx
-FROM nginx:alpine
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/build /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-```
+- `ec2`: provisioning instances with tags, volumes, and appropriate AMIs.
+- `keypair`: to create or use existing SSH keys.
+- `secgroup`: reusable and parameterized security groups.
+- `route53`: dynamic record creation.
+- `s3`: versioned S3 buckets with lifecycle policies.
 
-🔑 **Why multi-stage?**  
-It keeps the final image lightweight: only the build output and Nginx are included (not Node or dependencies).
+This modular approach allowed us to:
 
----
+✅ Separate concerns clearly.  
+✅ Reuse logic across environments (e.g., dev/prod).  
+✅ Isolate resources and simplify testing & troubleshooting.  
+✅ Learn **best practices** of clean Terraform composition.
 
-### 2. Server (Node.js + Express API)
+### Environment separation
 
-The server runs on **Node.js** and connects to **MongoDB**.  
+Each Terraform folder supports **multiple environments** via:
+- Workspaces (`dev`, `prod`) or
+- Local `terraform.tfstate.d/` structure.
 
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-EXPOSE 5001
-CMD ["npm", "start"]
-```
+Variables are declared in `variables.tf` and passed through `terraform.tfvars` for better control.
+
+### Summary of Terraform's role
+
+- ✅ Automated creation of infrastructure.
+- ✅ Clean separation between Jenkins and Kubernetes admin infrastructure.
+- ✅ Powerful state management and versioning with S3 (for `kOps`).
+- ✅ Security best practices using controlled SSH access.
 
 ---
 
-## ⚙️ Application Adjustments
+## ⚙️ Ansible — Configuration Management
 
-During the Dockerization process, some changes were required to make the application run correctly inside containers:
+Once the infrastructure is provisioned, we use **Ansible** to configure both EC2 instances.
 
-1. **Client `package.json`** →  
-   Set `homepage` to `/` (instead of the original subpath).  
+### Jenkins Host Setup (`ansible/ci_cd`)
 
-2. **Client `index.js`** →  
-   Updated `BrowserRouter basename="/"` so React Router works properly inside Nginx.  
+Using the `ci_cd/playbook.yaml`, we:
 
-3. **API Calls in Client** →  
-   Changed API URLs from container IPs to service names (e.g., `http://server-app:5001/...`) so containers can communicate over Docker’s internal network.  
+- Install **Docker**, **Node.js**, and **Jenkins**.
+- Add required Jenkins plugins and global tools.
+- Manage user/group permissions for Docker.
+- Ensure the system is ready to run our CI/CD pipelines.
 
-These changes solved:
-- Blank screen issue due to wrong `basename` and `homepage`.
-- API connection problems (DNS resolution inside Docker network).
+The Ansible inventory (`hosts.ini`) includes the IP/DNS of the Jenkins EC2 (output from Terraform).
 
----
+### Kubernetes Admin Host Setup (`ansible/kops_admin`)
 
-## 🐙 Docker Compose Setup
+Using the `site.yaml` playbook, we install:
 
-A `docker-compose.yaml` file was created to orchestrate **three services**:
+- `kOps`, `kubectl`, and `awscli`.
+- Any supporting packages needed to manage the cluster.
 
-- **client-app** → React app served via Nginx (port `3000` exposed).
-- **server-app** → Node.js/Express backend (port `5001` exposed).
-- **db-app** → MongoDB database with persistent storage.
+We then manage the Kubernetes cluster lifecycle with the following playbooks:
 
-```yaml
-services:
-  client-app:
-    build:
-      context: ./client
-      dockerfile: Dockerfile
-    ports:
-      - "3000:80"
-    depends_on:
-      - server-app
-    networks:
-      - blog-net
+- `kops_cluster_create.yaml` → Creates the cluster using `kops`, based on the domain and S3 state bucket provisioned by Terraform.
+- `kops_cluster_update.yaml` → Applies rolling updates to the cluster.
+- `kops_cluster_delete.yaml` → Destroys the cluster completely.
 
-  server-app:
-    build:
-      context: ./server
-      dockerfile: Dockerfile
-    env_file:
-      - .env
-    ports:
-      - "5001:5001"
-    depends_on:
-      - db-app
-    networks:
-      - blog-net
+These playbooks allow us to abstract the `kOps` CLI and create **idempotent**, trackable workflows.
 
-  db-app:
-    image: mongo
-    container_name: db-app
-    env_file:
-      - .env
-    ports:
-      - "27017:27017"
-    volumes:
-      - dbdata:/data/db
-    networks:
-      - blog-net
+### Why `kOps`?
 
-volumes:
-  dbdata:
+- ✅ Supports deploying production-grade Kubernetes clusters on AWS.
+- ✅ Fully integrates with Route53, S3, EC2, and SSH.
+- ✅ Easily customizable via manifests or CLI arguments.
+- ✅ Community-driven and widely adopted.
 
-networks:
-  blog-net:
-    driver: bridge
-```
+In our case, we used `kOps` to create a cluster accessible via a subdomain (e.g., `kubeapp.example.com`), using the state stored in the S3 bucket.
 
----
-
-## 🌍 Environment Variables
-
-All sensitive data and database configuration are stored in `.env`:
-
-```env
-MONGO_INITDB_ROOT_USERNAME=mongoadmin
-MONGO_INITDB_ROOT_PASSWORD=secret
-MONGO_URI=mongodb://mongoadmin:secret@db-app:27017/BlogApp?authSource=admin
-```
-
----
-
-## 📊 Architecture Overview
-
-- **Client** → React app, built with Node, served with Nginx.  
-- **Server** → Express.js API, connects to MongoDB.  
-- **Database** → MongoDB with persistent volume.  
-- **Networking** → All services communicate through a private Docker network (`blog-net`).  
-- **Persistence** → MongoDB data is stored in a named Docker volume (`dbdata`).  
-
----
-
-## ▶️ How to Run
-
-1. Build and start all services:
-   ```bash
-   docker-compose up --build
-   ```
-
-2. Access the application:
-   - Client (React + Nginx) → [http://localhost:3000](http://localhost:3000)  
-   - Server (Express API) → [http://localhost:5001](http://localhost:5001)  
-   - Database (MongoDB) → exposed at `mongodb://mongoadmin:secret@localhost:27017/BlogApp?authSource=admin`
+We also installed the **NGINX Ingress Controller**, using a compatible version with our Kubernetes release (e.g., controller v1.11.x for K8s 1.30+). This allows clean HTTP routing and future TLS termination.
 
 ---
 
 ## ✅ Summary
 
-This branch demonstrates how to:
-- Containerize an existing MERN app with Docker.
-- Use **multi-stage builds** for production-ready React apps.
-- Run Node.js server and MongoDB inside containers.
-- Fix common issues when containerizing existing apps (React Router `basename`, API DNS resolution).
-- Use `docker-compose` to integrate multiple services with environment variables, volumes, and a shared private network.
+| Tool       | Purpose                                                   |
+|------------|-----------------------------------------------------------|
+| **Terraform** | Provision AWS infrastructure using modular, reusable IaC |
+| **Ansible**   | Configure servers and manage Kubernetes via `kOps`       |
+| **kOps**      | Bootstrap Kubernetes clusters with AWS-native integration |
+| **Ingress**   | NGINX Controller for load-balanced HTTP routing          |
 
-This setup provides a **production-like environment** that is portable, isolated, and easy to run with a single command.
+This branch is a full example of combining **Terraform + Ansible + kOps** to automate the provisioning and management of infrastructure for a CI/CD-ready Kubernetes environment.
+
