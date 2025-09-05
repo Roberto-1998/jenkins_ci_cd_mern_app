@@ -24,7 +24,7 @@ const AddBlogs = () => {
   };
   const sendRequest = async () => {
     const res = await axios
-      .post(`${config.BASE_URL}/api/blogs/add`, {
+      .post(`${config.BASE_URL}/blogs/add`, {
         title: inputs.title,
         desc: inputs.description,
         img: inputs.imageURL.trim() === '' ? placeholderImg : inputs.imageURL,
