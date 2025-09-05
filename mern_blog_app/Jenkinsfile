@@ -41,9 +41,9 @@ pipeline {
 
         stage('CI - Backend & Frontend in Parallel') {
             parallel {
-                stage('Backend Flow') {
+                stage('Backend') {
                     stages {
-                        stage('Backend: Install & Lint & Test') {
+                        stage('Install & Test') {
                             steps {
                                 dir('mern_blog_app/server') {
                                     sh '''
@@ -62,7 +62,7 @@ pipeline {
                             }
                         }
 
-                        stage('Backend: Docker Build & Push') {
+                        stage('Docker Build & Push') {
                             steps {
                                 script {
                                     def imageName = "${env.IMAGE_PREFIX}/mern-backend"
@@ -91,9 +91,9 @@ pipeline {
                     }
                 }
 
-                stage('Frontend Flow') {
+                stage('Frontend') {
                     stages {
-                        stage('Frontend: Install & List & Test & Build') {
+                        stage('Install & Test') {
                             steps {
                                 dir('mern_blog_app/client') {
                                     sh '''
@@ -116,7 +116,7 @@ pipeline {
                             }
                         }
 
-                        stage('Frontend: Docker Build & Push') {
+                        stage('Docker Build & Push') {
                             steps {
                                 script {
                                     def imageName = "${env.IMAGE_PREFIX}/mern-frontend"
