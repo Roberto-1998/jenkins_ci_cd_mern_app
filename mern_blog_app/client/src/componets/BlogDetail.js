@@ -24,7 +24,7 @@ const BlogDetail = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchDetails = useCallback(async () => {
     try {
-      const res = await axios.get(`${config.BASE_URL}/api/blogs/${id}`);
+      const res = await axios.get(`${config.BASE_URL}/blogs/${id}`);
       const data = res.data;
       setBlog(data.blog);
       setInputs({
@@ -42,7 +42,7 @@ const BlogDetail = () => {
 
   const sendRequest = async () => {
     try {
-      const res = await axios.put(`${config.BASE_URL}/api/blogs/update/${id}`, {
+      const res = await axios.put(`${config.BASE_URL}/blogs/update/${id}`, {
         title: inputs.title,
         description: inputs.description,
       });
