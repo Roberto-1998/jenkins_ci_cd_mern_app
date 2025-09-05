@@ -1,6 +1,6 @@
 const isProd = process.env.NODE_ENV === 'production';
 
 const config = {
-  BASE_URL: isProd ? '/' : 'http://localhost:5001',
+  BASE_URL: isProd ? '/api' : 'http://localhost:5001/api',
 };
 export default config;
