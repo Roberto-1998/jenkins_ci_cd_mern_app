@@ -71,7 +71,7 @@ const Header = () => {
   return (
     <AppBar position="sticky" sx={{ background: `${theme.bg}` }}>
       <Toolbar>
-        <Typography variant="h4">Mariela Hello</Typography>
+        <Typography variant="h4">BlogsApp</Typography>
         {isLoggedIn && (
           <Box display="flex" marginLeft={'auto'} marginRight="auto">
             <Tabs textColor="inherit" value={value} onChange={handleTabChange}>
