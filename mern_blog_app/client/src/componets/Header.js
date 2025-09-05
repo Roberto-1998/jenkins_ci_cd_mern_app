@@ -118,7 +118,7 @@ const Header = () => {
               sx={{ margin: 1, borderRadius: 10 }}
               color="warning"
             >
-               Just Logout
+              Just Logout
             </Button>
           )}
           <div
