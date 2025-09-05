@@ -71,9 +71,12 @@ ingress:
   name: mern-app-ingress
   host: mernapp.rcginfo.xyz
   className: nginx
-  path: /
-  backend_service: client-app
-  backend_port: 80
+  frontend_path: /
+  frontend_service: client-app
+  frontend_port: 80
+  backend_path: /api
+  backend_service: server-app
+  backend_port: 5001
 
 secret:
   name: db-secret

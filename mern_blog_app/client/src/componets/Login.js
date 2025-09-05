@@ -29,9 +29,9 @@ const Login = () => {
   }, [isSignupButtonPressed]);
   const sendRequest = async (type = 'login') => {
     console.log('inside send req');
-    console.log(`${config.BASE_URL}/api/users/${type}`);
+    console.log(`${config.BASE_URL}/users/${type}`);
     const res = await axios
-      .post(`${config.BASE_URL}/api/users/${type}`, {
+      .post(`${config.BASE_URL}/users/${type}`, {
         name: inputs.name,
         email: inputs.email,
         password: inputs.password,

@@ -23,7 +23,7 @@ const Blogs = ({ title, desc, img, user, isUser, id }) => {
   };
   const deleteRequest = async () => {
     const res = await axios
-      .delete(`${config.BASE_URL}/api/blogs/${id}`)
+      .delete(`${config.BASE_URL}/blogs/${id}`)
       .catch((err) => console.log(err));
     const data = await res.data;
     return data;
