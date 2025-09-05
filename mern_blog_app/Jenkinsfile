@@ -85,58 +85,63 @@ pipeline {
             }
         }
 
-        stage('Docker Build & Push - Backend') {
-            steps {
-                script {
-                    def imageName = "${env.IMAGE_PREFIX}/mern-backend"
-                    dir('mern_blog_app/server') {
-                        sh "docker pull ${imageName}:${BRANCH} || true"
-                        def img = docker.build(
+        stage('Docker Build & Push') {
+            parallel {
+                stage('Backend') {
+                    steps {
+                        script {
+                            def imageName = "${env.IMAGE_PREFIX}/mern-backend"
+                            dir('mern_blog_app/server') {
+                                sh "docker pull ${imageName}:${BRANCH} || true"
+                                def img = docker.build(
                             "${imageName}:${TAG}",
                             "--build-arg BUILDKIT_INLINE_CACHE=1 --cache-from=${imageName}:${BRANCH} -f Dockerfile ."
                             )
-                            retry(2) {
-                            docker.withRegistry('https://index.docker.io/v1/', env.DOCKERHUB_CREDENTIALS) {
-                                img.push(TAG)
-                                img.push(BRANCH)
-                                if (env.BRANCH_NAME == 'main') { img.push('latest') }
-                            }
-                            }
-                    }
-                }
-            }
-            post {
-                always {
-                    sh 'docker image prune -f || true'
-                }
-            }
-        }
-
-        stage('Docker Build & Push - Frontend') {
-            steps {
-                script {
-                    def imageName = "${env.IMAGE_PREFIX}/mern-frontend"
-
-                    dir('mern_blog_app/client') {
-                        sh "docker pull ${imageName}:${BRANCH} || true"
-                        def img = docker.build(
-                            "${imageName}:${TAG}",
-                             "--build-arg BUILDKIT_INLINE_CACHE=1 --cache-from=${imageName}:${BRANCH} -f Dockerfile ."
-                            )
-                        retry(2) {
-                            docker.withRegistry('https://index.docker.io/v1/', env.DOCKERHUB_CREDENTIALS ) {
-                                img.push(TAG)
-                                img.push(BRANCH)
-                                if (env.BRANCH_NAME == 'main') { img.push('latest') }
+                                retry(2) {
+                                    docker.withRegistry('https://index.docker.io/v1/', env.DOCKERHUB_CREDENTIALS) {
+                                        img.push(TAG)
+                                        img.push(BRANCH)
+                                        if (env.BRANCH_NAME == 'main') { img.push('latest') }
+                                    }
+                                }
                             }
                         }
                     }
+                    post {
+                        always {
+                            sh 'docker image prune -f || true'
+                        }
+                    }
                 }
-            }
-            post {
-                always {
-                    sh 'docker image prune -f || true'
+
+                stage('Frontend') {
+                    steps {
+                        script {
+                            def imageName = "${env.IMAGE_PREFIX}/mern-frontend"
+
+                            dir('mern_blog_app/client') {
+                                sh "docker pull ${imageName}:${BRANCH} || true"
+                                def img = docker.build(
+                            "${imageName}:${TAG}",
+                             "--build-arg BUILDKIT_INLINE_CACHE=1 --cache-from=${imageName}:${BRANCH} -f Dockerfile ."
+                            )
+                                retry(2) {
+                                    docker.withRegistry('https://index.docker.io/v1/', env.DOCKERHUB_CREDENTIALS ) {
+                                        img.push(TAG)
+                                        img.push(BRANCH)
+                                        if (env.BRANCH_NAME == 'main') { img.push('latest') }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    post {
+                        always {
+                            sh 'docker image prune -f || true'
+                        }
+                    }
                 }
+
             }
         }
 
