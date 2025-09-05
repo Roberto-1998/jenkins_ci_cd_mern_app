@@ -39,106 +39,117 @@ pipeline {
             }
         }
 
-        stage('CI - Install, Lint, Test & Build (Parallel)') {
+        stage('CI - Backend & Frontend in Parallel') {
             parallel {
-                stages {
-                    stage('Backend') {
-                        steps {
-                            dir('mern_blog_app/server') {
-                                sh '''
+                stage('Backend Flow') {
+                    stages {
+                        stage('Backend: Install & Lint & Test') {
+                            steps {
+                                dir('mern_blog_app/server') {
+                                    sh '''
                                 set -e
                                 npm ci || npm install || yarn install
                                 npm run lint
                                 JEST_JUNIT_OUTPUT=./junit.xml npm test -- --watchAll=false --reporters=default --reporters=jest-junit --coverage || echo "No backend tests yet"
                                     '''
+                                }
+                            }
+                            post {
+                                always {
+                                    junit allowEmptyResults: true, testResults: 'mern_blog_app/server/junit.xml'
+                                    archiveArtifacts artifacts: 'mern_blog_app/server/coverage/**', allowEmptyArchive: true
+                                }
                             }
                         }
-                        post {
-                            always {
-                                junit allowEmptyResults: true, testResults: 'mern_blog_app/server/junit.xml'
-                                archiveArtifacts artifacts: 'mern_blog_app/server/coverage/**', allowEmptyArchive: true
-                            }
-                        }
-                    }
 
-                    stage('Docker Backend') {
-                        steps {
-                            script {
-                                def imageName = "${env.IMAGE_PREFIX}/mern-backend"
-                                dir('mern_blog_app/server') {
-                                    sh "docker pull ${imageName}:${BRANCH} || true"
-                                    def img = docker.build(
+                        stage('Backend: Docker Build & Push') {
+                            steps {
+                                script {
+                                    def imageName = "${env.IMAGE_PREFIX}/mern-backend"
+                                    dir('mern_blog_app/server') {
+                                        sh "docker pull ${imageName}:${BRANCH} || true"
+                                        def img = docker.build(
                             "${imageName}:${TAG}",
                             "--build-arg BUILDKIT_INLINE_CACHE=1 --cache-from=${imageName}:${BRANCH} -f Dockerfile ."
                             )
-                                    retry(2) {
-                                        docker.withRegistry('https://index.docker.io/v1/', env.DOCKERHUB_CREDENTIALS) {
-                                            img.push(TAG)
-                                            img.push(BRANCH)
-                                            if (env.BRANCH_NAME == 'main') { img.push('latest') }
+                                        retry(2) {
+                                            docker.withRegistry('https://index.docker.io/v1/', env.DOCKERHUB_CREDENTIALS) {
+                                                img.push(TAG)
+                                                img.push(BRANCH)
+                                                if (env.BRANCH_NAME == 'main') { img.push('latest') }
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-                        post {
-                            always {
-                                sh 'docker image prune -f || true'
+                            post {
+                                always {
+                                    sh 'docker image prune -f || true'
+                                }
                             }
                         }
                     }
                 }
 
-                stages {
-                    stage('Frontend') {
-                        steps {
-                            dir('mern_blog_app/client') {
-                                sh '''
+                stage('Frontend Flow') {
+                    stages {
+                        stage('Frontend: Install & List & Test & Build') {
+                            steps {
+                                dir('mern_blog_app/client') {
+                                    sh '''
                                 set -e
                                 npm ci || npm install || yarn install
                                 npm run lint
                                 JEST_JUNIT_OUTPUT=./junit.xml npm test -- --watchAll=false --reporters=default --reporters=jest-junit --coverage || echo "No frontend tests yet"
                                 npm run build
                                 '''
+                                }
+                            }
+                            post {
+                                always {
+                                    junit allowEmptyResults: true, testResults: 'mern_blog_app/client/junit.xml'
+                                    archiveArtifacts artifacts: 'mern_blog_app/client/coverage/**', allowEmptyArchive: true
+                                }
+                                success {
+                                    archiveArtifacts artifacts: 'mern_blog_app/client/build/**', fingerprint: true
+                                }
                             }
                         }
-                        post {
-                            always {
-                                junit allowEmptyResults: true, testResults: 'mern_blog_app/client/junit.xml'
-                                archiveArtifacts artifacts: 'mern_blog_app/client/coverage/**', allowEmptyArchive: true
-                            }
-                            success {
-                                archiveArtifacts artifacts: 'mern_blog_app/client/build/**', fingerprint: true
-                            }
-                        }
-                    }
-                    stage('Docker Frontend') {
-                        steps {
-                            script {
-                                def imageName = "${env.IMAGE_PREFIX}/mern-frontend"
 
-                                dir('mern_blog_app/client') {
-                                    sh "docker pull ${imageName}:${BRANCH} || true"
-                                    def img = docker.build(
+                        stage('Docker Build & Push') {
+                            parallel {
+                                stage('Frontend') {
+                                    steps {
+                                        script {
+                                            def imageName = "${env.IMAGE_PREFIX}/mern-frontend"
+
+                                            dir('mern_blog_app/client') {
+                                                sh "docker pull ${imageName}:${BRANCH} || true"
+                                                def img = docker.build(
                             "${imageName}:${TAG}",
                              "--build-arg BUILDKIT_INLINE_CACHE=1 --cache-from=${imageName}:${BRANCH} -f Dockerfile ."
                             )
-                                    retry(2) {
-                                        docker.withRegistry('https://index.docker.io/v1/', env.DOCKERHUB_CREDENTIALS ) {
-                                            img.push(TAG)
-                                            img.push(BRANCH)
-                                            if (env.BRANCH_NAME == 'main') { img.push('latest') }
+                                                retry(2) {
+                                                    docker.withRegistry('https://index.docker.io/v1/', env.DOCKERHUB_CREDENTIALS ) {
+                                                        img.push(TAG)
+                                                        img.push(BRANCH)
+                                                        if (env.BRANCH_NAME == 'main') { img.push('latest') }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    post {
+                                        always {
+                                            sh 'docker image prune -f || true'
                                         }
                                     }
                                 }
                             }
                         }
-                        post {
-                            always {
-                                sh 'docker image prune -f || true'
-                            }
-                        }
+
                     }
+
                 }
             }
         }
