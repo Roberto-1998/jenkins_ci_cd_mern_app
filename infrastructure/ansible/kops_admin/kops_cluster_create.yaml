@@ -117,14 +117,14 @@
       shell: "getent hosts api.{{ cluster_name }}"
       register: dns_ready
       retries: 30
-      delay: 10
+      delay: 20
       until: dns_ready.rc == 0
     
     - name: Wait until port 443 of API is reachable
       shell: "timeout 5 bash -c '</dev/tcp/api.{{ cluster_name }}/443'"
       register: port_open
       retries: 30
-      delay: 10
+      delay: 20
       until: port_open.rc == 0
 
 
